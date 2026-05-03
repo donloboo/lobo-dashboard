@@ -61,11 +61,13 @@ function emptyWeek(): WeekState {
   return Object.fromEntries(DAYS.map(d => [d, {}])) as WeekState
 }
 
-function loadWeek(weekId: string): WeekState {
-  if (typeof window === 'undefined') return emptyWeek()
+async function loadWeek(weekId: string): Promise<WeekState> {
   try {
-    const stored = localStorage.getItem(`lobo_wk_${weekId}`)
-    if (stored) return JSON.parse(stored)
+    const res = await fetch(`/api/scorecard?weekId=${weekId}`)
+    if (res.ok) {
+      const saved = await res.json()
+      if (saved) return { ...emptyWeek(), ...saved }
+    }
   } catch {}
   const seed = getSeedWeek(weekId)
   if (!seed) return emptyWeek()
@@ -144,7 +146,7 @@ export default function OverviewPage() {
   const weekId = getMondayId()
 
   useEffect(() => {
-    setCurrentWeek(loadWeek(weekId))
+    loadWeek(weekId).then(setCurrentWeek)
   }, [weekId])
 
   // Aggregate based on period

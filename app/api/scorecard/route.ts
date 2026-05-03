@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { syncScorecard } from '@/lib/sync-scorecard'
 
 const FILE = path.join(process.cwd(), 'data', 'scorecard.json')
 
@@ -13,6 +14,7 @@ function readAll(): Record<string, unknown> {
 }
 
 export async function GET(req: Request) {
+  syncScorecard()
   const { searchParams } = new URL(req.url)
   const weekId = searchParams.get('weekId')
   const all = readAll()
