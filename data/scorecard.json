@@ -1,0 +1,58 @@
+{
+  "2026-04-26": {
+    "mon": {
+      "edv_booked": 0,
+      "atl_booked": 0,
+      "lobo_shown": 0,
+      "pikz_plays": 0,
+      "pikz_apps_meta": 0,
+      "lobo_closed": 0,
+      "lobo_dq": 0,
+      "lobo_whop_rev": 0,
+      "lobo_hotmart_rev": 0
+    },
+    "tue": {
+      "atl_booked": 0,
+      "lobo_whop_rev": 3,
+      "edv_dq": 2
+    },
+    "wed": {},
+    "thu": {},
+    "fri": {},
+    "sat": {},
+    "sun": {}
+  },
+  "2026-04-27": {
+    "mon": {},
+    "tue": {},
+    "wed": {},
+    "thu": {},
+    "fri": {},
+    "sat": {
+      "lobo_shown": 3,
+      "lobo_closed": 0,
+      "lobo_dq": 1,
+      "ellow_dms": 60,
+      "ellow_convos": 15,
+      "ellow_booked": 3
+    },
+    "sun": {
+      "edv_dials": 1,
+      "edv_convos": 1,
+      "edv_booked": 1,
+      "edv_dq": 0,
+      "atl_dials": 1,
+      "atl_convos": 1,
+      "atl_booked": 0,
+      "atl_dq": 1,
+      "lobo_shown": 0,
+      "lobo_closed": 0,
+      "lobo_dq": 0,
+      "ellow_dms": 55,
+      "ellow_convos": 24,
+      "ellow_booked": 3,
+      "pikz_visits": 25,
+      "pikz_plays": 3
+    }
+  }
+}
