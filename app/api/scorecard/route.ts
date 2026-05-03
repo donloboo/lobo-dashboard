@@ -22,9 +22,16 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { weekId, data } = await req.json()
+    const { weekId, day, field, value } = await req.json()
     const all = readAll()
-    all[weekId] = data
+    if (!all[weekId]) all[weekId] = {}
+    const week = all[weekId] as Record<string, Record<string, number>>
+    if (!week[day]) week[day] = {}
+    if (value === null || value === undefined) {
+      delete week[day][field]
+    } else {
+      week[day][field] = value
+    }
     fs.writeFileSync(FILE, JSON.stringify(all, null, 2))
     return NextResponse.json({ ok: true })
   } catch (e) {

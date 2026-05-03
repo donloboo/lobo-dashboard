@@ -97,11 +97,11 @@ async function loadWeek(weekId: string): Promise<WeekState> {
   return seedToWeekState(weekId)
 }
 
-async function saveWeek(weekId: string, data: WeekState) {
-  await fetch('/api/scorecard', {
+function saveField(weekId: string, day: DayKey, field: keyof DayInput, value: number | null) {
+  fetch('/api/scorecard', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ weekId, data }),
+    body: JSON.stringify({ weekId, day, field, value }),
   })
 }
 
@@ -114,15 +114,19 @@ export default function ScorecardPage() {
     loadWeek(weekId).then(setData)
   }, [weekId])
 
+  useEffect(() => {
+    function onFocus() { loadWeek(weekId).then(setData) }
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [weekId])
+
   const handleInput = useCallback((day: DayKey, field: keyof DayInput, value: string) => {
-    setData(prev => {
-      const next: WeekState = {
-        ...prev,
-        [day]: { ...prev[day], [field]: value === '' ? undefined : Number(value) }
-      }
-      saveWeek(weekId, next)
-      return next
-    })
+    const numVal = value === '' ? null : Number(value)
+    setData(prev => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: numVal === null ? undefined : numVal }
+    }))
+    saveField(weekId, day, field, numVal)
   }, [weekId])
 
   const dayCalcs: CalcDay[] = DAYS.map(d => calcDay(data[d]))
