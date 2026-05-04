@@ -84,6 +84,7 @@ export default function DialerReportsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [filter, setFilter] = useState<DialerOutcome | 'all'>('all')
   const [dialerFilter, setDialerFilter] = useState<Dialer | 'all'>('all')
+  const [period, setPeriod] = useState<'dag' | 'vecka' | 'manad'>('dag')
 
   useEffect(() => { loadReports().then(setReports) }, [])
 
@@ -136,21 +137,29 @@ export default function DialerReportsPage() {
     setDeleteId(null)
   }
 
-  const thisWeek = reports.filter(r => {
+  const todayStr2 = today
+
+  const periodReports = reports.filter(r => {
     const d = new Date(r.date + 'T00:00:00')
-    const mon = new Date()
-    mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
-    mon.setHours(0, 0, 0, 0)
-    return d >= mon
+    if (period === 'dag') return r.date === todayStr2
+    if (period === 'vecka') {
+      const mon = new Date()
+      mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
+      mon.setHours(0, 0, 0, 0)
+      return d >= mon
+    }
+    // manad
+    const now = new Date()
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
   })
 
-  const thisWeekFiltered = dialerFilter === 'all' ? thisWeek : thisWeek.filter(r => r.dialer === dialerFilter)
+  const periodFiltered = dialerFilter === 'all' ? periodReports : periodReports.filter(r => r.dialer === dialerFilter)
 
   const stats = {
-    total:    thisWeekFiltered.length,
-    booked:   thisWeekFiltered.filter(r => r.outcome === 'booked').length,
-    dq:       thisWeekFiltered.filter(r => r.outcome === 'dq').length,
-    callback: thisWeekFiltered.filter(r => r.outcome === 'callback').length,
+    total:    periodFiltered.length,
+    booked:   periodFiltered.filter(r => r.outcome === 'booked').length,
+    dq:       periodFiltered.filter(r => r.outcome === 'dq').length,
+    callback: periodFiltered.filter(r => r.outcome === 'callback').length,
   }
 
   const byDialer  = dialerFilter === 'all' ? reports : reports.filter(r => r.dialer === dialerFilter)
@@ -216,6 +225,18 @@ export default function DialerReportsPage() {
         </div>
       )}
 
+      {/* Period toggle */}
+      <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1 mb-4 w-fit">
+        {([['dag','Dag'],['vecka','Vecka'],['manad','Månad']] as [string,string][]).map(([val, label]) => (
+          <button key={val} onClick={() => setPeriod(val as 'dag'|'vecka'|'manad')}
+            className={`px-4 py-1.5 rounded text-[11px] font-black tracking-[0.8px] uppercase transition-colors ${
+              period === val ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Dialer filter */}
       <div className="flex gap-2 mb-4">
         {([['all', 'Alla'], ['Edvard', 'Edvard'], ['Atlassi', 'Atlassi']] as [string, string][]).map(([val, label]) => (
@@ -233,7 +254,7 @@ export default function DialerReportsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Samtal denna vecka', val: stats.total,    color: 'text-white' },
+          { label: period === 'dag' ? 'Samtal idag' : period === 'vecka' ? 'Samtal denna vecka' : 'Samtal denna månad', val: stats.total, color: 'text-white' },
           { label: 'Bokade',             val: stats.booked,   color: 'text-green-400' },
           { label: 'DQ',                 val: stats.dq,       color: 'text-red-400' },
           { label: 'Återring',           val: stats.callback, color: 'text-blue-400' },
