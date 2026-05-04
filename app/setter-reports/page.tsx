@@ -141,6 +141,7 @@ export default function SetterReportsPage() {
   const DMS_DAY = 60
   const CONVOS_DAY = 15
   const BOOKED_DAY = 2
+  const DAYS_PER_WEEK = 7
 
   function barColor(val: number, target: number) {
     const p = val / target
@@ -174,10 +175,10 @@ export default function SetterReportsPage() {
       {/* Weekly KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
         {[
-          { label: 'DMs Skickade',   val: week.dms,     target: DMS_DAY * 5,    suffix: '' },
-          { label: 'Konversationer', val: week.convos,   target: CONVOS_DAY * 5, suffix: '' },
-          { label: 'Inkommande',     val: week.inbound,  target: 0,              suffix: '' },
-          { label: 'Bokade',         val: week.booked,   target: BOOKED_DAY * 5, suffix: '' },
+          { label: 'DMs Skickade',   val: week.dms,     target: DMS_DAY * DAYS_PER_WEEK,    suffix: '' },
+          { label: 'Konversationer', val: week.convos,   target: CONVOS_DAY * DAYS_PER_WEEK, suffix: '' },
+          { label: 'Inkommande',     val: week.inbound,  target: 0,                          suffix: '' },
+          { label: 'Bokade',         val: week.booked,   target: BOOKED_DAY * DAYS_PER_WEEK, suffix: '' },
         ].map(s => (
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-zinc-600 mb-1">{s.label}</div>
