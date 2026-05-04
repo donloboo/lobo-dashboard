@@ -61,6 +61,7 @@ export default function SetterReportsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [period, setPeriod] = useState<'dag' | 'vecka'>('dag')
 
   useEffect(() => { loadReports().then(setReports) }, [])
 
@@ -131,12 +132,21 @@ export default function SetterReportsPage() {
     return d >= mon
   })
 
+  const todayReports = reports.filter(r => r.date === todayStr())
+
   const week = {
     dms:     thisWeek.reduce((s, r) => s + r.dms_sent, 0),
     convos:  thisWeek.reduce((s, r) => s + r.convos,   0),
     inbound: thisWeek.reduce((s, r) => s + r.inbound,  0),
     booked:  thisWeek.reduce((s, r) => s + r.booked,   0),
   }
+  const day = {
+    dms:     todayReports.reduce((s, r) => s + r.dms_sent, 0),
+    convos:  todayReports.reduce((s, r) => s + r.convos,   0),
+    inbound: todayReports.reduce((s, r) => s + r.inbound,  0),
+    booked:  todayReports.reduce((s, r) => s + r.booked,   0),
+  }
+  const stats = period === 'dag' ? day : week
 
   const DMS_DAY = 60
   const CONVOS_DAY = 15
@@ -172,13 +182,25 @@ export default function SetterReportsPage() {
         </button>
       </div>
 
-      {/* Weekly KPI cards */}
+      {/* DAG / VECKA toggle */}
+      <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1 mb-4 w-fit">
+        {(['dag', 'vecka'] as const).map(p => (
+          <button key={p} onClick={() => setPeriod(p)}
+            className={`px-5 py-1.5 rounded text-[11px] font-black tracking-[0.8px] uppercase transition-colors ${
+              period === p ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            }`}>
+            {p === 'dag' ? 'Dag' : 'Vecka'}
+          </button>
+        ))}
+      </div>
+
+      {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
         {[
-          { label: 'DMs Skickade',   val: week.dms,     target: DMS_DAY * DAYS_PER_WEEK,    suffix: '' },
-          { label: 'Konversationer', val: week.convos,   target: CONVOS_DAY * DAYS_PER_WEEK, suffix: '' },
-          { label: 'Inkommande',     val: week.inbound,  target: 0,                          suffix: '' },
-          { label: 'Bokade',         val: week.booked,   target: BOOKED_DAY * DAYS_PER_WEEK, suffix: '' },
+          { label: 'DMs Skickade',   val: stats.dms,     target: period === 'dag' ? DMS_DAY : DMS_DAY * DAYS_PER_WEEK    },
+          { label: 'Konversationer', val: stats.convos,   target: period === 'dag' ? CONVOS_DAY : CONVOS_DAY * DAYS_PER_WEEK },
+          { label: 'Inkommande',     val: stats.inbound,  target: 0 },
+          { label: 'Bokade',         val: stats.booked,   target: period === 'dag' ? BOOKED_DAY : BOOKED_DAY * DAYS_PER_WEEK },
         ].map(s => (
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-zinc-600 mb-1">{s.label}</div>
@@ -193,7 +215,7 @@ export default function SetterReportsPage() {
                     style={{ width: `${Math.min(100, (s.val / s.target) * 100)}%` }}
                   />
                 </div>
-                <div className="text-[10px] text-zinc-600 mt-1">Mål: {s.target}/vecka</div>
+                <div className="text-[10px] text-zinc-600 mt-1">Mål: {s.target}/{period === 'dag' ? 'dag' : 'vecka'}</div>
               </div>
             )}
           </div>
@@ -205,14 +227,14 @@ export default function SetterReportsPage() {
         <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-xl px-4 py-3 flex items-center gap-4">
           <div>
             <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-zinc-600">Svarsfrekvens</div>
-            <div className="text-xl font-extrabold text-white">{pct(week.convos, week.dms)}</div>
+            <div className="text-xl font-extrabold text-white">{pct(stats.convos, stats.dms)}</div>
           </div>
           <div className="text-[10px] text-zinc-700">Mål: 25%</div>
         </div>
         <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-xl px-4 py-3 flex items-center gap-4">
           <div>
             <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-zinc-600">Bokningsfrekvens</div>
-            <div className="text-xl font-extrabold text-white">{pct(week.booked, week.convos)}</div>
+            <div className="text-xl font-extrabold text-white">{pct(stats.booked, stats.convos)}</div>
           </div>
           <div className="text-[10px] text-zinc-700">Mål: 15%</div>
         </div>
