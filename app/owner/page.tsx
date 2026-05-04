@@ -32,11 +32,6 @@ function feeAmt(gross: number, platform: Platform) {
   return Math.round(gross * (platform === 'whop' ? WHOP_FEE : HOTMART_FEE))
 }
 
-function loadReports(): CallReport[] {
-  if (typeof window === 'undefined') return []
-  try { return JSON.parse(localStorage.getItem('lobo_call_reports') ?? '[]') }
-  catch { return [] }
-}
 
 const MONTH_NAMES = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December']
 
@@ -50,12 +45,19 @@ export default function OwnerPage() {
   const [unlocked, setUnlocked] = useState(false)
   const [error, setError] = useState(false)
   const [reports, setReports] = useState<CallReport[]>([])
+  const [setterReports, setSetterReports] = useState<{date:string;dms_sent:number}[]>([])
+  const [dialerReports, setDialerReports] = useState<{date:string;dialer:string;outcome:string}[]>([])
 
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth()) // 0-indexed
 
-  useEffect(() => { if (unlocked) setReports(loadReports()) }, [unlocked])
+  useEffect(() => {
+    if (!unlocked) return
+    fetch('/api/call-reports').then(r => r.json()).then(setReports).catch(() => {})
+    fetch('/api/setter-reports').then(r => r.json()).then(setSetterReports).catch(() => {})
+    fetch('/api/dialer-reports').then(r => r.json()).then(setDialerReports).catch(() => {})
+  }, [unlocked])
 
   function handlePin(digit: string) {
     const next = pin + digit
@@ -78,6 +80,16 @@ export default function OwnerPage() {
     if (month === 11) { setMonth(0); setYear(y => y + 1) }
     else setMonth(m => m + 1)
   }
+
+  // ── Vecko-KPIs ──
+  const weekStart = (() => {
+    const m = new Date(); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); m.setHours(0,0,0,0); return m
+  })()
+  const ellowWeekDms = setterReports
+    .filter(r => new Date(r.date + 'T00:00:00') >= weekStart)
+    .reduce((s, r) => s + (r.dms_sent ?? 0), 0)
+  const edvWeekBooked = dialerReports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart && r.dialer === 'Edvard'  && r.outcome === 'booked').length
+  const atlWeekBooked = dialerReports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart && r.dialer === 'Atlassi' && r.outcome === 'booked').length
 
   // ── Filtrera denna månad ──
   const monthReports = reports.filter(r => {
@@ -186,6 +198,74 @@ export default function OwnerPage() {
           className="text-zinc-600 hover:text-zinc-400 text-[11px] font-bold uppercase tracking-widest border border-zinc-800 px-3 py-2 rounded-lg transition-colors">
           Lås
         </button>
+      </div>
+
+      {/* Vecko-KPIs */}
+      <div className="mb-6 bg-zinc-900 border border-zinc-700 rounded-xl p-5">
+        <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500 mb-4">Veckans KPI-mål</div>
+        <div className="grid grid-cols-3 gap-4">
+          {/* Ellow */}
+          {(() => {
+            const goal = 60, val = ellowWeekDms, done = val >= goal
+            const pct = Math.min(100, (val / goal) * 100)
+            return (
+              <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
+                <div className="text-[10px] font-black tracking-[1.5px] uppercase text-zinc-500 mb-1">Ellow — DM Setter</div>
+                <div className="flex items-end gap-1 mb-2">
+                  <span className={`text-3xl font-extrabold ${done ? 'text-gold' : val > 0 ? 'text-white' : 'text-zinc-600'}`}>{val}</span>
+                  <span className="text-zinc-600 text-sm mb-1">/ {goal} DMs</span>
+                </div>
+                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-1">
+                  <div className={`h-full rounded-full ${done ? 'bg-gold' : 'bg-zinc-500'}`} style={{width:`${pct}%`}} />
+                </div>
+                <div className={`text-[11px] font-bold ${done ? 'text-gold' : 'text-zinc-600'}`}>
+                  {done ? '✓ Bonus upplåst — 400 kr' : `${goal - val} DMs kvar`}
+                </div>
+              </div>
+            )
+          })()}
+          {/* Edvard */}
+          {(() => {
+            const goal = 8, val = edvWeekBooked, done = val >= goal
+            const pct = Math.min(100, (val / goal) * 100)
+            return (
+              <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
+                <div className="text-[10px] font-black tracking-[1.5px] uppercase text-zinc-500 mb-1">Edvard — Dialer</div>
+                <div className="flex items-end gap-1 mb-2">
+                  <span className={`text-3xl font-extrabold ${done ? 'text-gold' : val > 0 ? 'text-white' : 'text-zinc-600'}`}>{val}</span>
+                  <span className="text-zinc-600 text-sm mb-1">/ {goal} bokningar</span>
+                </div>
+                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-1">
+                  <div className={`h-full rounded-full ${done ? 'bg-gold' : 'bg-zinc-500'}`} style={{width:`${pct}%`}} />
+                </div>
+                <div className={`text-[11px] font-bold ${done ? 'text-gold' : 'text-zinc-600'}`}>
+                  {done ? '✓ Kvalificerad för bonus' : `${goal - val} bokningar kvar`}
+                </div>
+              </div>
+            )
+          })()}
+          {/* Atlassi */}
+          {(() => {
+            const goal = 8, val = atlWeekBooked, done = val >= goal
+            const pct = Math.min(100, (val / goal) * 100)
+            return (
+              <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
+                <div className="text-[10px] font-black tracking-[1.5px] uppercase text-zinc-500 mb-1">Atlassi — Dialer</div>
+                <div className="flex items-end gap-1 mb-2">
+                  <span className={`text-3xl font-extrabold ${done ? 'text-gold' : val > 0 ? 'text-white' : 'text-zinc-600'}`}>{val}</span>
+                  <span className="text-zinc-600 text-sm mb-1">/ {goal} bokningar</span>
+                </div>
+                <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-1">
+                  <div className={`h-full rounded-full ${done ? 'bg-gold' : 'bg-zinc-500'}`} style={{width:`${pct}%`}} />
+                </div>
+                <div className={`text-[11px] font-bold ${done ? 'text-gold' : 'text-zinc-600'}`}>
+                  {done ? '✓ Kvalificerad för bonus' : `${goal - val} bokningar kvar`}
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 400 kr vid 60 DMs · Dialers: 500 kr till den som bokar flest (minst 8)</div>
       </div>
 
       {/* Cash Collected — big card */}

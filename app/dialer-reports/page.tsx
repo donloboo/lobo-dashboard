@@ -166,7 +166,7 @@ export default function DialerReportsPage() {
   const filtered  = filter === 'all' ? byDialer : byDialer.filter(r => r.outcome === filter)
 
   // Tävling — veckans bokningar per dialer
-  const BONUS_TARGET = 7
+  const BONUS_TARGET = 8
   const weekStart = (() => {
     const mon = new Date()
     mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
