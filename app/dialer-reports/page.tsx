@@ -83,6 +83,7 @@ export default function DialerReportsPage() {
   const [saved, setSaved] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [filter, setFilter] = useState<DialerOutcome | 'all'>('all')
+  const [dialerFilter, setDialerFilter] = useState<Dialer | 'all'>('all')
 
   useEffect(() => { loadReports().then(setReports) }, [])
 
@@ -136,21 +137,24 @@ export default function DialerReportsPage() {
   }
 
   const thisWeek = reports.filter(r => {
-    const d = new Date(r.date)
+    const d = new Date(r.date + 'T00:00:00')
     const mon = new Date()
     mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
     mon.setHours(0, 0, 0, 0)
     return d >= mon
   })
 
+  const thisWeekFiltered = dialerFilter === 'all' ? thisWeek : thisWeek.filter(r => r.dialer === dialerFilter)
+
   const stats = {
-    total: thisWeek.length,
-    booked: thisWeek.filter(r => r.outcome === 'booked').length,
-    dq: thisWeek.filter(r => r.outcome === 'dq').length,
-    callback: thisWeek.filter(r => r.outcome === 'callback').length,
+    total:    thisWeekFiltered.length,
+    booked:   thisWeekFiltered.filter(r => r.outcome === 'booked').length,
+    dq:       thisWeekFiltered.filter(r => r.outcome === 'dq').length,
+    callback: thisWeekFiltered.filter(r => r.outcome === 'callback').length,
   }
 
-  const filtered = filter === 'all' ? reports : reports.filter(r => r.outcome === filter)
+  const byDialer  = dialerFilter === 'all' ? reports : reports.filter(r => r.dialer === dialerFilter)
+  const filtered  = filter === 'all' ? byDialer : byDialer.filter(r => r.outcome === filter)
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -211,6 +215,20 @@ export default function DialerReportsPage() {
           Sparat.
         </div>
       )}
+
+      {/* Dialer filter */}
+      <div className="flex gap-2 mb-4">
+        {([['all', 'Alla'], ['Edvard', 'Edvard'], ['Atlassi', 'Atlassi']] as [string, string][]).map(([val, label]) => (
+          <button key={val} onClick={() => setDialerFilter(val as Dialer | 'all')}
+            className={`px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all ${
+              dialerFilter === val
+                ? 'border-gold bg-gold/10 text-gold'
+                : 'border-zinc-800 text-zinc-500 hover:border-zinc-600 hover:text-zinc-300'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
