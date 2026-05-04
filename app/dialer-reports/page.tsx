@@ -165,6 +165,18 @@ export default function DialerReportsPage() {
   const byDialer  = dialerFilter === 'all' ? reports : reports.filter(r => r.dialer === dialerFilter)
   const filtered  = filter === 'all' ? byDialer : byDialer.filter(r => r.outcome === filter)
 
+  // Tävling — veckans bokningar per dialer
+  const BONUS_TARGET = 7
+  const weekStart = (() => {
+    const mon = new Date()
+    mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
+    mon.setHours(0, 0, 0, 0)
+    return mon
+  })()
+  const weekReports = reports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart)
+  const edvBooked = weekReports.filter(r => r.dialer === 'Edvard'  && r.outcome === 'booked').length
+  const atlBooked = weekReports.filter(r => r.dialer === 'Atlassi' && r.outcome === 'booked').length
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
 
@@ -218,6 +230,47 @@ export default function DialerReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Tävling — 500 kr bonus */}
+      <div className="mb-5 bg-zinc-900 border border-zinc-700 rounded-xl p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-[10px] font-black tracking-[2px] uppercase text-gold">Tävling veckan</span>
+          <span className="text-[11px] text-zinc-500">Flest bokningar vinner</span>
+          <span className="ml-auto text-[13px] font-black text-gold">500 kr</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {([
+            { name: 'Edvard',  booked: edvBooked },
+            { name: 'Atlassi', booked: atlBooked },
+          ] as const).map(({ name, booked }) => {
+            const pct = Math.min(100, (booked / BONUS_TARGET) * 100)
+            const isLeading = name === 'Edvard' ? edvBooked > atlBooked : atlBooked > edvBooked
+            const isTie = edvBooked === atlBooked
+            const done = booked >= BONUS_TARGET
+            return (
+              <div key={name} className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : isLeading && !isTie ? 'border-zinc-600' : 'border-zinc-800'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[13px] font-black text-white">{name}</span>
+                  {done && <span className="text-[10px] font-black text-gold ml-auto">NÅTT MÅLET 🏆</span>}
+                  {!done && isLeading && !isTie && <span className="text-[10px] font-bold text-zinc-400 ml-auto">Leder</span>}
+                  {!done && isTie && <span className="text-[10px] font-bold text-zinc-600 ml-auto">Lika</span>}
+                </div>
+                <div className="flex items-end gap-1.5 mb-2">
+                  <span className={`text-3xl font-extrabold ${done ? 'text-gold' : isLeading && !isTie ? 'text-white' : 'text-zinc-500'}`}>{booked}</span>
+                  <span className="text-zinc-600 text-sm mb-1">/ {BONUS_TARGET} bokningar</span>
+                </div>
+                <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-gold' : isLeading && !isTie ? 'bg-zinc-300' : 'bg-zinc-700'}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-zinc-600 mt-1">{BONUS_TARGET - booked > 0 ? `${BONUS_TARGET - booked} bokningar kvar` : 'Bonus upplåst!'}</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {saved && (
         <div className="mb-4 bg-green-950/50 border border-green-700 rounded-xl p-3 text-sm text-green-400 font-bold">
