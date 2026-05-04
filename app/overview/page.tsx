@@ -6,7 +6,7 @@ import {
   ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { sumDays, calcDay, fmt } from '@/lib/calc'
-import { SEED_DATA, weekNum, getMondayId, getSeedWeek } from '@/lib/data'
+import { weekNum, getMondayId, getSeedWeek } from '@/lib/data'
 import type { DayInput, CalcDay } from '@/lib/types'
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -33,8 +33,7 @@ function pctOf(val: number, target: number) {
 function colorByPct(pct: number) {
   if (pct >= 100) return 'text-green-400'
   if (pct >= 80)  return 'text-orange-400'
-  if (pct > 0)    return 'text-red-400'
-  return 'text-zinc-600'
+  return 'text-red-400'
 }
 
 function barByPct(pct: number) {
@@ -46,8 +45,7 @@ function barByPct(pct: number) {
 function borderByPct(pct: number) {
   if (pct >= 100) return 'border-green-500/20'
   if (pct >= 80)  return 'border-orange-500/20'
-  if (pct > 0)    return 'border-red-500/20'
-  return 'border-zinc-800'
+  return 'border-red-500/20'
 }
 
 // Omvänd logik: lägre värde är bättre — target/val*100 ger > 100 när val < target
@@ -140,20 +138,39 @@ function FunnelRow({ label, value, barWidth, color, prevPct }: FunnelRowProps) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+function getMonthWeekIds(): string[] {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  const weekIds: string[] = []
+  const d = new Date(year, month, 1)
+  const dow = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() - dow)
+  const endOfMonth = new Date(year, month + 1, 0)
+  while (d <= endOfMonth) {
+    weekIds.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)
+    d.setDate(d.getDate() + 7)
+  }
+  return weekIds
+}
+
 export default function OverviewPage() {
   const [period, setPeriod] = useState<Period>('vecka')
   const [currentWeek, setCurrentWeek] = useState<WeekState>(emptyWeek)
+  const [monthWeeks, setMonthWeeks] = useState<{weekId: string; state: WeekState}[]>([])
   const weekId = getMondayId()
 
   useEffect(() => {
     loadWeek(weekId).then(setCurrentWeek)
+    const ids = getMonthWeekIds()
+    Promise.all(ids.map(async wid => ({ weekId: wid, state: await loadWeek(wid) }))).then(setMonthWeeks)
   }, [weekId])
 
   // Aggregate based on period
   const t: CalcDay = (() => {
     if (period === 'dag')   return calcDay(currentWeek[DAYS[todayIdx()]])
     if (period === 'vecka') return sumDays(DAYS.map(d => currentWeek[d]))
-    return sumDays(SEED_DATA.flatMap(w => w.days))
+    return sumDays(monthWeeks.flatMap(w => DAYS.map(d => w.state[d])))
   })()
 
   const tgt = TARGETS[period]
@@ -190,10 +207,10 @@ export default function OverviewPage() {
   const funnelMax = Math.max(funnelStages[0].value, 1)
 
   // Chart data — weekly when period=manad, daily for dag/vecka
-  const monthlyData = SEED_DATA.map(w => {
-    const wt = sumDays(w.days)
+  const monthlyData = monthWeeks.map(({ weekId: wid, state }) => {
+    const wt = sumDays(DAYS.map(d => state[d]))
     return {
-      label:     `V${weekNum(w.weekId)}`,
+      label:     `V${weekNum(wid)}`,
       revenue:   wt.lobo_total_rev,
       closeRate: wt.lobo_close_r != null ? +(wt.lobo_close_r * 100).toFixed(1) : null,
       showRate:  wt.lobo_show_r  != null ? +(wt.lobo_show_r  * 100).toFixed(1) : null,
@@ -213,10 +230,12 @@ export default function OverviewPage() {
   const chartData = period === 'manad' ? monthlyData : dailyData
   const chartRevTarget = tgt.rev
 
+  const now = new Date()
+  const monthLabel = now.toLocaleString('sv-SE', { month: 'long', year: 'numeric' })
   const periodSubtitle: Record<Period, string> = {
     dag:   `Idag — ${DAY_LABELS[todayIdx()]}`,
     vecka: `Vecka ${weekNum(weekId)}`,
-    manad: 'April 2026',
+    manad: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
   }
 
   return (

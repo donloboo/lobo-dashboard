@@ -330,9 +330,19 @@ export default function ScorecardPage() {
 
                   {/* Daily target */}
                   <td className="border-l border-zinc-800 text-center">
-                    <span className="text-[12px] text-zinc-700 px-2">
-                      {m.targets ? (m.isRate ? `${(m.targets.d * 100).toFixed(0)}%` : m.targets.d.toLocaleString('sv-SE')) : '—'}
-                    </span>
+                    {(() => {
+                      if (!m.targets) return <span className="text-[12px] text-zinc-700 px-2">—</span>
+                      const todayCalc = todayKey ? dayCalcs[DAYS.indexOf(todayKey)] : null
+                      const todayVal  = todayCalc && m.id ? getVal(todayCalc, m.id) : null
+                      const met = todayVal !== null && (
+                        m.isInverse ? todayVal <= m.targets.d : todayVal >= m.targets.d
+                      )
+                      return (
+                        <span className={`text-[12px] font-bold px-2 ${met ? 'text-green-400' : 'text-zinc-700'}`}>
+                          {m.isRate ? `${(m.targets.d * 100).toFixed(0)}%` : m.targets.d.toLocaleString('sv-SE')}
+                        </span>
+                      )
+                    })()}
                   </td>
 
                   {/* Weekly target */}
