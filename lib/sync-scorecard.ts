@@ -78,6 +78,7 @@ export function syncScorecard() {
     // --- Lobo (call reports) ---
     if (calls.length > 0) {
       day.lobo_shown  = calls.filter(r => r.outcome !== 'noshow').length
+      day.lobo_noshow = calls.filter(r => r.outcome === 'noshow').length
       day.lobo_closed = calls.filter(r => r.outcome === 'closed_pif' || r.outcome === 'closed_partial').length
       day.lobo_dq     = calls.filter(r => r.outcome === 'no_value'   || r.outcome === 'not_serious').length
 

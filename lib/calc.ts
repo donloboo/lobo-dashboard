@@ -15,14 +15,15 @@ export function calcDay(d: Partial<DayInput> = {}): CalcDay {
   const atlD = n(d.atl_dials), atlC = n(d.atl_convos), atlB = n(d.atl_booked)
   const pV = n(d.pikz_visits), pP = n(d.pikz_plays)
   const pAO = n(d.pikz_apps_org), pAM = n(d.pikz_apps_meta)
-  const lSh = n(d.lobo_shown), lC = n(d.lobo_closed)
+  const lSh = n(d.lobo_shown), lNS = d.lobo_noshow, lC = n(d.lobo_closed)
   const whop    = n(d.lobo_whop_rev)
   const hotmart = n(d.lobo_hotmart_rev)
   const edvDQ = n(d.edv_dq), atlDQ = n(d.atl_dq), loboDQ = n(d.lobo_dq)
 
   const teamDials = edvD + atlD
   const teamBooked = eb + edvB + atlB
-  const lobo_sched = teamBooked  // speglar Team Booked automatiskt
+  // Om call reports finns (lobo_noshow är satt), använd faktisk data — annars faller tillbaka på teamets bokningar
+  const lobo_sched = lNS !== undefined ? lSh + lNS : teamBooked
 
   return {
     ellow_dms: ed, ellow_convos: ec, ellow_booked: eb,
@@ -71,7 +72,7 @@ export function sumDays(days: Partial<DayInput>[]): CalcDay {
     'edv_dials','edv_convos','edv_booked',
     'atl_dials','atl_convos','atl_booked',
     'pikz_visits','pikz_plays','pikz_apps_org','pikz_apps_meta',
-    'lobo_shown','lobo_closed','lobo_whop_rev','lobo_hotmart_rev',
+    'lobo_shown','lobo_noshow','lobo_closed','lobo_whop_rev','lobo_hotmart_rev',
     'edv_dq','atl_dq','lobo_dq',
   ]
   const sums: Partial<DayInput> = {}

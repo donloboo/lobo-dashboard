@@ -13,6 +13,7 @@ export interface DayInput {
   pikz_apps_org: number
   pikz_apps_meta: number
   lobo_shown: number
+  lobo_noshow: number
   lobo_closed: number
   lobo_whop_rev: number    // manuell — Whop-intäkt
   lobo_hotmart_rev: number // manuell — Hotmart-intäkt
