@@ -3,11 +3,20 @@ import { useState, useEffect } from 'react'
 
 type DialerOutcome = 'booked' | 'dq' | 'callback' | 'no_answer' | 'not_interested'
 type Dialer = 'Edvard' | 'Atlassi'
+type LeadSource = 'livestream' | 'kostnadsfri'
+
+const LEAD_SOURCES: { value: LeadSource; label: string }[] = [
+  { value: 'livestream',   label: 'Dropshipping LIVESTREAM 27 APRIL' },
+  { value: 'kostnadsfri',  label: 'Få Din Kostnadsfria Utbildning Här' },
+]
+
+function sourceLabel(s?: LeadSource) { return LEAD_SOURCES.find(x => x.value === s)?.label ?? '—' }
 
 interface DialerReport {
   id: string
   date: string
   dialer: Dialer
+  lead_source?: LeadSource
   name: string
   phone: string
   instagram: string
@@ -60,6 +69,7 @@ function formatDate(v: string) {
 const emptyForm = (): Omit<DialerReport, 'id' | 'created_at'> => ({
   date: todayStr(),
   dialer: 'Edvard',
+  lead_source: undefined,
   name: '',
   phone: '',
   instagram: '',
@@ -349,6 +359,25 @@ export default function DialerReportsPage() {
             </Field>
           </div>
 
+          {/* Lead source */}
+          <Field label="Listan de ringer ifrån" required>
+            <div className="flex flex-col gap-2">
+              {LEAD_SOURCES.map(s => (
+                <button key={s.value} type="button" onClick={() => set('lead_source', s.value)}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl border text-left text-[12px] font-bold transition-all ${
+                    form.lead_source === s.value
+                      ? 'border-gold bg-gold/10 text-gold'
+                      : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-600'
+                  }`}>
+                  <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${form.lead_source === s.value ? 'border-gold' : 'border-zinc-700'}`}>
+                    {form.lead_source === s.value && <span className="w-2 h-2 rounded-full bg-gold block" />}
+                  </span>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           {/* Kontaktinfo */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Namn" required>
@@ -491,7 +520,10 @@ export default function DialerReportsPage() {
                   <span className="text-zinc-500 font-normal ml-1">· {formatDate(r.callback_date)}</span>
                 )}
               </span>
-              <span className="text-[10px] text-zinc-700 ml-auto">{r.dialer} · {formatDate(r.date)}</span>
+              <span className="text-[10px] text-zinc-700 ml-auto">
+                {r.dialer} · {formatDate(r.date)}
+                {r.lead_source && <span className="ml-1 text-zinc-600">· {r.lead_source === 'livestream' ? 'Livestream' : 'Kostnadsfri'}</span>}
+              </span>
               <button onClick={() => openEdit(r)}
                 className="text-zinc-500 hover:text-gold text-[11px] font-bold transition-colors">Ändra</button>
               {deleteId === r.id ? (
