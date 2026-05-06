@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { syncScorecard } from '@/lib/sync-scorecard'
-import { sendDiscord, setterEmbed } from '@/lib/discord'
+import { sendDiscord, setterBookingEmbed } from '@/lib/discord'
 
 const FILE = path.join(process.cwd(), 'data', 'setter-reports.json')
 
@@ -28,15 +28,9 @@ export async function POST(req: Request) {
     fs.writeFileSync(FILE, JSON.stringify(newData, null, 2))
     syncScorecard()
 
-    // Notify Discord for new setter reports (not edits)
     for (const r of newData) {
-      if (!oldIds.has(r.id)) {
-        await sendDiscord(setterEmbed({
-          dms_sent: r.dms_sent ?? 0,
-          convos:   r.convos   ?? 0,
-          booked:   r.booked   ?? 0,
-          date:     r.date     ?? '',
-        }))
+      if (!oldIds.has(r.id) && (r.booked ?? 0) > 0) {
+        await sendDiscord(setterBookingEmbed({ booked: r.booked, date: r.date }), 'setter')
       }
     }
 

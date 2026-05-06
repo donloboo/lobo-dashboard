@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { syncScorecard } from '@/lib/sync-scorecard'
-import { sendDiscord, closeEmbed } from '@/lib/discord'
+import { sendDiscord, callEmbed, closeEmbed } from '@/lib/discord'
 
 const FILE = path.join(process.cwd(), 'data', 'call-reports.json')
 
@@ -30,16 +30,21 @@ export async function POST(req: Request) {
     fs.writeFileSync(FILE, JSON.stringify(newData, null, 2))
     syncScorecard()
 
-    // Notify Discord for new closes (not edits that were already closed)
     for (const r of newData) {
-      const isClose = r.outcome === 'closed_pif' || r.outcome === 'closed_partial'
-      if (!isClose) continue
+      const isNew    = !oldIds.has(r.id)
+      const oldOutcome = oldById[r.id]?.outcome
 
-      const isNew     = !oldIds.has(r.id)
-      const wasClose  = oldById[r.id]?.outcome === 'closed_pif' || oldById[r.id]?.outcome === 'closed_partial'
+      if (!isNew && oldOutcome === r.outcome) continue
 
-      if (isNew || !wasClose) {
-        await sendDiscord(closeEmbed(r))
+      const isClose  = r.outcome === 'closed_pif' || r.outcome === 'closed_partial'
+      const wasClose = oldOutcome === 'closed_pif' || oldOutcome === 'closed_partial'
+
+      // #alla-samtal — every new or outcome-changed report
+      await sendDiscord(callEmbed(r), 'calls')
+
+      // #closes — only new closes
+      if (isClose && !wasClose) {
+        await sendDiscord(closeEmbed(r), 'closes')
       }
     }
 

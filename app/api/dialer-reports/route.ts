@@ -30,15 +30,12 @@ export async function POST(req: Request) {
     fs.writeFileSync(FILE, JSON.stringify(newData, null, 2))
     syncScorecard()
 
-    // Notify Discord for new bookings
     for (const r of newData) {
       if (r.outcome !== 'booked') continue
-
-      const isNew       = !oldIds.has(r.id)
-      const wasBooked   = oldById[r.id]?.outcome === 'booked'
-
+      const isNew      = !oldIds.has(r.id)
+      const wasBooked  = oldById[r.id]?.outcome === 'booked'
       if (isNew || !wasBooked) {
-        await sendDiscord(bookingEmbed(r))
+        await sendDiscord(bookingEmbed(r), 'dialer')
       }
     }
 
