@@ -165,8 +165,10 @@ export default function DialerReportsPage() {
 
   const periodFiltered = dialerFilter === 'all' ? periodReports : periodReports.filter(r => r.dialer === dialerFilter)
 
+  const DAILY_ANSWER_TARGET = 10
   const stats = {
     total:    periodFiltered.length,
+    answered: periodFiltered.filter(r => r.outcome !== 'no_answer').length,
     booked:   periodFiltered.filter(r => r.outcome === 'booked').length,
     dq:       periodFiltered.filter(r => r.outcome === 'dq').length,
     callback: periodFiltered.filter(r => r.outcome === 'callback').length,
@@ -314,13 +316,35 @@ export default function DialerReportsPage() {
         ))}
       </div>
 
+      {/* Dagligt svar-mål */}
+      {period === 'dag' && (
+        <div className={`mb-4 rounded-xl border p-4 ${stats.answered >= DAILY_ANSWER_TARGET ? 'border-green-700 bg-green-950/30' : 'border-zinc-700 bg-zinc-900'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black tracking-[2px] uppercase text-zinc-400">Dagligt mål — Svarat</span>
+            <span className={`text-[13px] font-black ${stats.answered >= DAILY_ANSWER_TARGET ? 'text-green-400' : 'text-zinc-300'}`}>
+              {stats.answered} / {DAILY_ANSWER_TARGET}
+              {stats.answered >= DAILY_ANSWER_TARGET && ' ✓'}
+            </span>
+          </div>
+          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${stats.answered >= DAILY_ANSWER_TARGET ? 'bg-green-500' : 'bg-zinc-400'}`}
+              style={{ width: `${Math.min(100, (stats.answered / DAILY_ANSWER_TARGET) * 100)}%` }}
+            />
+          </div>
+          <div className="text-[10px] text-zinc-600 mt-1">
+            {stats.answered >= DAILY_ANSWER_TARGET ? 'Målet nått!' : `${DAILY_ANSWER_TARGET - stats.answered} svar kvar — Svarade inte räknas inte`}
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
-          { label: period === 'dag' ? 'Samtal idag' : period === 'vecka' ? 'Samtal denna vecka' : 'Samtal denna månad', val: stats.total, color: 'text-white' },
-          { label: 'Bokade',             val: stats.booked,   color: 'text-green-400' },
-          { label: 'DQ',                 val: stats.dq,       color: 'text-red-400' },
-          { label: 'Återring',           val: stats.callback, color: 'text-blue-400' },
+          { label: 'Svarat',   val: stats.answered, color: 'text-white' },
+          { label: 'Bokade',   val: stats.booked,   color: 'text-green-400' },
+          { label: 'DQ',       val: stats.dq,       color: 'text-red-400' },
+          { label: 'Återring', val: stats.callback, color: 'text-blue-400' },
         ].map(s => (
           <div key={s.label} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-zinc-600 mb-1">{s.label}</div>
