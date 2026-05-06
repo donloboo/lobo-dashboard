@@ -1,9 +1,4 @@
-const WEBHOOKS = {
-  calls:   process.env.DISCORD_WEBHOOK_CALLS,   // alla samtal med Lobo
-  closes:  process.env.DISCORD_WEBHOOK_CLOSES,  // closes only
-  dialer:  process.env.DISCORD_WEBHOOK_DIALER,  // dialer bokningar
-  setter:  process.env.DISCORD_WEBHOOK_SETTER,  // setter bokningar
-}
+type Channel = 'calls' | 'closes' | 'dialer' | 'setter'
 
 interface Embed {
   title: string
@@ -12,7 +7,13 @@ interface Embed {
   footer?: { text: string }
 }
 
-export async function sendDiscord(embed: Embed, channel: keyof typeof WEBHOOKS) {
+export async function sendDiscord(embed: Embed, channel: Channel) {
+  const WEBHOOKS: Record<Channel, string | undefined> = {
+    calls:  process.env.DISCORD_WEBHOOK_CALLS,
+    closes: process.env.DISCORD_WEBHOOK_CLOSES,
+    dialer: process.env.DISCORD_WEBHOOK_DIALER,
+    setter: process.env.DISCORD_WEBHOOK_SETTER,
+  }
   const url = WEBHOOKS[channel]
   if (!url) return
   try {

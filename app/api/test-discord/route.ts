@@ -1,13 +1,15 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 
-const WEBHOOKS = {
-  calls:  process.env.DISCORD_WEBHOOK_CALLS,
-  closes: process.env.DISCORD_WEBHOOK_CLOSES,
-  dialer: process.env.DISCORD_WEBHOOK_DIALER,
-  setter: process.env.DISCORD_WEBHOOK_SETTER,
-}
-
 export async function GET() {
+  const WEBHOOKS = {
+    calls:  process.env.DISCORD_WEBHOOK_CALLS,
+    closes: process.env.DISCORD_WEBHOOK_CLOSES,
+    dialer: process.env.DISCORD_WEBHOOK_DIALER,
+    setter: process.env.DISCORD_WEBHOOK_SETTER,
+  }
+
   const results: Record<string, string> = {}
 
   for (const [channel, url] of Object.entries(WEBHOOKS)) {
