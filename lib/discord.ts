@@ -48,6 +48,24 @@ export function closeEmbed(r: {
   }
 }
 
+export function setterEmbed(r: {
+  dms_sent: number
+  convos: number
+  booked: number
+  date: string
+}): Embed {
+  return {
+    title: '📩 Ellow — Daglig rapport',
+    color: 0x5865F2,
+    fields: [
+      { name: 'DMs skickade', value: String(r.dms_sent), inline: true },
+      { name: 'Konversationer', value: String(r.convos),  inline: true },
+      { name: 'Bokade',         value: String(r.booked),  inline: true },
+    ],
+    footer: { text: 'The Money Team Dashboard' },
+  }
+}
+
 export function bookingEmbed(r: {
   name: string
   dialer: string
