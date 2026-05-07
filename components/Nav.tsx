@@ -8,6 +8,7 @@ const TABS = [
   { href: '/call-reports',    label: 'Call Reports' },
   { href: '/dialer-reports',  label: 'Dialer Reports' },
   { href: '/setter-reports',  label: 'Setter Reports' },
+  { href: '/call-review',     label: 'Granskning' },
   { href: '/owner',           label: '🔒' },
 ]
 
