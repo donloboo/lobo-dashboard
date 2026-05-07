@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import OpenAI, { toFile } from 'openai'
+import ffmpeg from 'fluent-ffmpeg'
 
 const TRANSCRIPTS_FILE = path.join(process.cwd(), 'data', 'transcripts.json')
 function saveEntry(entry: object) {
@@ -12,6 +13,21 @@ function saveEntry(entry: object) {
   try { all = JSON.parse(fs.readFileSync(TRANSCRIPTS_FILE, 'utf-8')) } catch {}
   all.unshift(entry)
   fs.writeFileSync(TRANSCRIPTS_FILE, JSON.stringify(all, null, 2))
+}
+
+function convertToMp3(inputPath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputFormat('mp3')
+      .audioCodec('libmp3lame')
+      .audioFrequency(16000)
+      .audioChannels(1)
+      .audioBitrate('64k')
+      .output(outputPath)
+      .on('end', () => resolve())
+      .on('error', (err) => reject(err))
+      .run()
+  })
 }
 
 const ANALYSIS_PROMPT = `Du är en säljtränare för ett dropshipping-utbildningsföretag i Sverige.
@@ -46,7 +62,8 @@ export async function POST(req: Request) {
   }
 
   const openai = new OpenAI({ apiKey })
-  let tmpPath = ''
+  let tmpInput = ''
+  let tmpMp3 = ''
 
   try {
     const formData = await req.formData()
@@ -57,31 +74,21 @@ export async function POST(req: Request) {
 
     if (!file) return NextResponse.json({ error: 'Ingen fil' }, { status: 400 })
 
+    // Write uploaded file to tmp
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'm4a'
+    const ts = Date.now()
+    tmpInput = path.join(os.tmpdir(), `whisper-in-${ts}.${ext}`)
+    tmpMp3   = path.join(os.tmpdir(), `whisper-out-${ts}.mp3`)
+    fs.writeFileSync(tmpInput, buffer)
 
-    // Log diagnostic info
-    const magic = buffer.slice(0, 12).toString('hex')
-    console.log(`[transcribe] file=${file.name} size=${buffer.length} ext=${ext} magic=${magic}`)
+    // Convert to mp3 — handles any format (m4a, mp4, wav, ogg, etc.)
+    await convertToMp3(tmpInput, tmpMp3)
 
-    // Write to tmp
-    tmpPath = path.join(os.tmpdir(), `whisper-${Date.now()}.${ext}`)
-    fs.writeFileSync(tmpPath, buffer)
-
-    // 1. Transcribe — use toFile with explicit MIME type (most reliable)
-    const stream = fs.createReadStream(tmpPath)
-    // Force audio/mp4 for m4a/mp4, proper types for others
-    const mimeMap: Record<string, string> = {
-      mp3: 'audio/mpeg', m4a: 'audio/mp4', mp4: 'audio/mp4',
-      wav: 'audio/wav',  ogg: 'audio/ogg', webm: 'audio/webm',
-      flac: 'audio/flac', oga: 'audio/ogg',
-    }
-    const mime = mimeMap[ext] ?? 'audio/mp4'
-    const audioFile = await toFile(stream, `audio.${ext}`, { type: mime })
-
-    console.log(`[transcribe] sending to whisper: name=${audioFile.name} type=${audioFile.type} size=${audioFile.size}`)
-
+    // 1. Transcribe with Whisper
+    const mp3Stream = fs.createReadStream(tmpMp3)
+    const audioFile = await toFile(mp3Stream, 'audio.mp3', { type: 'audio/mpeg' })
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model: 'whisper-1',
@@ -116,6 +123,7 @@ export async function POST(req: Request) {
     console.error('[transcribe] error:', String(e))
     return NextResponse.json({ error: String(e) }, { status: 500 })
   } finally {
-    if (tmpPath) try { fs.unlinkSync(tmpPath) } catch {}
+    if (tmpInput) try { fs.unlinkSync(tmpInput) } catch {}
+    if (tmpMp3)   try { fs.unlinkSync(tmpMp3) } catch {}
   }
 }
