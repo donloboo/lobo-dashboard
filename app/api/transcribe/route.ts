@@ -53,8 +53,18 @@ export async function POST(req: Request) {
     if (!file) return NextResponse.json({ error: 'Ingen fil' }, { status: 400 })
 
     // 1. Transcribe with Whisper
+    const arrayBuffer = await file.arrayBuffer()
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'm4a'
+    const mimeMap: Record<string, string> = {
+      mp3: 'audio/mpeg', m4a: 'audio/mp4', mp4: 'audio/mp4',
+      wav: 'audio/wav',  ogg: 'audio/ogg', webm: 'audio/webm',
+      flac: 'audio/flac', oga: 'audio/ogg',
+    }
+    const mime = mimeMap[ext] ?? 'audio/mp4'
+    const blob = new Blob([arrayBuffer], { type: mime })
+
     const whisperForm = new FormData()
-    whisperForm.append('file', file)
+    whisperForm.append('file', blob, `audio.${ext}`)
     whisperForm.append('model', 'whisper-1')
     whisperForm.append('language', 'sv')
 
