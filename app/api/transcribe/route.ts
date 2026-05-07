@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import OpenAI, { toFile } from 'openai'
 
 const TRANSCRIPTS_FILE = path.join(process.cwd(), 'data', 'transcripts.json')
 function saveEntry(entry: object) {
@@ -43,6 +44,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'OPENAI_API_KEY saknas' }, { status: 500 })
   }
 
+  const openai = new OpenAI({ apiKey })
+
   try {
     const formData = await req.formData()
     const file     = formData.get('audio') as File
@@ -52,8 +55,9 @@ export async function POST(req: Request) {
 
     if (!file) return NextResponse.json({ error: 'Ingen fil' }, { status: 400 })
 
-    // 1. Transcribe with Whisper
+    // 1. Transcribe with Whisper via OpenAI SDK
     const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'm4a'
     const mimeMap: Record<string, string> = {
       mp3: 'audio/mpeg', m4a: 'audio/mp4', mp4: 'audio/mp4',
@@ -61,46 +65,26 @@ export async function POST(req: Request) {
       flac: 'audio/flac', oga: 'audio/ogg',
     }
     const mime = mimeMap[ext] ?? 'audio/mp4'
-    const blob = new Blob([arrayBuffer], { type: mime })
 
-    const whisperForm = new FormData()
-    whisperForm.append('file', blob, `audio.${ext}`)
-    whisperForm.append('model', 'whisper-1')
-    whisperForm.append('language', 'sv')
-
-    const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: whisperForm,
+    const audioFile = await toFile(buffer, `audio.${ext}`, { type: mime })
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-1',
+      language: 'sv',
     })
-
-    if (!whisperRes.ok) {
-      const err = await whisperRes.text()
-      return NextResponse.json({ error: `Whisper fel: ${err}` }, { status: 500 })
-    }
-
-    const { text: transcript } = await whisperRes.json()
+    const transcript = transcription.text
 
     // 2. Analyze with GPT-4o-mini
-    const gptRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: ANALYSIS_PROMPT },
-          { role: 'user',   content: `Transkript:\n\n${transcript}` },
-        ],
-      }),
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: ANALYSIS_PROMPT },
+        { role: 'user',   content: `Transkript:\n\n${transcript}` },
+      ],
     })
+    const analysis = completion.choices[0]?.message?.content ?? 'Kunde inte analysera.'
 
-    const gptData = await gptRes.json()
-    const analysis = gptData.choices?.[0]?.message?.content ?? 'Kunde inte analysera.'
-
-    // 3. Save directly to file
+    // 3. Save to file
     const entry = {
       id:         Date.now().toString(),
       date,
