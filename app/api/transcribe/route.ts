@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-import OpenAI, { toFile } from 'openai'
+import os from 'os'
+import OpenAI from 'openai'
 
 const TRANSCRIPTS_FILE = path.join(process.cwd(), 'data', 'transcripts.json')
 function saveEntry(entry: object) {
@@ -45,6 +46,7 @@ export async function POST(req: Request) {
   }
 
   const openai = new OpenAI({ apiKey })
+  let tmpPath = ''
 
   try {
     const formData = await req.formData()
@@ -55,20 +57,16 @@ export async function POST(req: Request) {
 
     if (!file) return NextResponse.json({ error: 'Ingen fil' }, { status: 400 })
 
-    // 1. Transcribe with Whisper via OpenAI SDK
+    // Write to temp file — most reliable way to send to Whisper from Node.js
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     const ext = file.name.split('.').pop()?.toLowerCase() ?? 'm4a'
-    const mimeMap: Record<string, string> = {
-      mp3: 'audio/mpeg', m4a: 'audio/mp4', mp4: 'audio/mp4',
-      wav: 'audio/wav',  ogg: 'audio/ogg', webm: 'audio/webm',
-      flac: 'audio/flac', oga: 'audio/ogg',
-    }
-    const mime = mimeMap[ext] ?? 'audio/mp4'
+    tmpPath = path.join(os.tmpdir(), `whisper-${Date.now()}.${ext}`)
+    fs.writeFileSync(tmpPath, buffer)
 
-    const audioFile = await toFile(buffer, `audio.${ext}`, { type: mime })
+    // 1. Transcribe with Whisper via ReadStream
     const transcription = await openai.audio.transcriptions.create({
-      file: audioFile,
+      file: fs.createReadStream(tmpPath),
       model: 'whisper-1',
       language: 'sv',
     })
@@ -99,5 +97,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, entry })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
+  } finally {
+    if (tmpPath) try { fs.unlinkSync(tmpPath) } catch {}
   }
 }
