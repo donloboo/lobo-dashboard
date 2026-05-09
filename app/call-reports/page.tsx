@@ -49,7 +49,7 @@ const OUTCOMES: { value: Outcome; label: string; color: string }[] = [
 ]
 
 const WHOP_FEE = 0.037
-const HOTMART_FEE = 0.124
+const HOTMART_FEE = 0.30
 
 function netRevenue(amount: number, platform: Platform): number {
   return Math.round(amount * (1 - (platform === 'whop' ? WHOP_FEE : HOTMART_FEE)))
@@ -411,7 +411,7 @@ export default function CallReportsPage() {
                           ? 'border-gold bg-gold/10 text-gold'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600'
                       }`}>
-                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–12.4%)'}
+                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–30%)'}
                     </button>
                   ))}
                 </div>
@@ -470,7 +470,7 @@ export default function CallReportsPage() {
                           ? 'border-gold bg-gold/10 text-gold'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600'
                       }`}>
-                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–12.4%)'}
+                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–30%)'}
                     </button>
                   ))}
                 </div>
