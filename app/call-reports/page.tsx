@@ -11,6 +11,7 @@ type Outcome =
   | 'closed_pif'
   | 'closed_partial'
   | 'upsell'
+  | 'upsell_partial'
 
 type Platform = 'whop' | 'hotmart'
 
@@ -35,19 +36,20 @@ interface CallReport {
 }
 
 const OUTCOMES: { value: Outcome; label: string; color: string }[] = [
-  { value: 'noshow',         label: 'Dök inte upp',            color: 'text-zinc-400' },
-  { value: 'rebooked',       label: 'Ombokat',                 color: 'text-blue-400' },
-  { value: 'no_money',       label: 'Hade inte råd',           color: 'text-orange-400' },
-  { value: 'ask_someone',    label: 'Måste fråga någon annan', color: 'text-yellow-400' },
-  { value: 'no_value',       label: 'Förstod inte värdet',     color: 'text-orange-400' },
-  { value: 'not_serious',    label: 'Oseriös',                 color: 'text-red-400' },
-  { value: 'closed_pif',     label: 'Stängd — Paid in Full',   color: 'text-green-400' },
-  { value: 'closed_partial', label: 'Stängd — Delbetalning',   color: 'text-emerald-400' },
-  { value: 'upsell',         label: 'Tillägg',                 color: 'text-zinc-500' },
+  { value: 'noshow',         label: 'Dök inte upp',              color: 'text-zinc-400' },
+  { value: 'rebooked',       label: 'Ombokat',                   color: 'text-blue-400' },
+  { value: 'no_money',       label: 'Hade inte råd',             color: 'text-orange-400' },
+  { value: 'ask_someone',    label: 'Måste fråga någon annan',   color: 'text-yellow-400' },
+  { value: 'no_value',       label: 'Förstod inte värdet',       color: 'text-orange-400' },
+  { value: 'not_serious',    label: 'Oseriös',                   color: 'text-red-400' },
+  { value: 'closed_pif',     label: 'Stängd — Paid in Full',     color: 'text-green-400' },
+  { value: 'closed_partial', label: 'Stängd — Delbetalning',     color: 'text-emerald-400' },
+  { value: 'upsell',         label: 'Tillägg',                   color: 'text-purple-400' },
+  { value: 'upsell_partial', label: 'Tillägg — Delbetalning',    color: 'text-purple-300' },
 ]
 
 const WHOP_FEE = 0.037
-const HOTMART_FEE = 0.20
+const HOTMART_FEE = 0.124
 
 function netRevenue(amount: number, platform: Platform): number {
   return Math.round(amount * (1 - (platform === 'whop' ? WHOP_FEE : HOTMART_FEE)))
@@ -55,9 +57,9 @@ function netRevenue(amount: number, platform: Platform): number {
 
 function outcomeLabel(o: Outcome) { return OUTCOMES.find(x => x.value === o)?.label ?? o }
 function outcomeColor(o: Outcome) { return OUTCOMES.find(x => x.value === o)?.color ?? 'text-zinc-400' }
-function isClosed(o: Outcome) { return o === 'closed_pif' || o === 'closed_partial' || o === 'upsell' }
-function isPartial(o: Outcome) { return o === 'closed_partial' }
-function isUpsell(o: Outcome) { return o === 'upsell' }
+function isClosed(o: Outcome) { return o === 'closed_pif' || o === 'closed_partial' || o === 'upsell' || o === 'upsell_partial' }
+function isPartial(o: Outcome) { return o === 'closed_partial' || o === 'upsell_partial' }
+function isUpsell(o: Outcome) { return o === 'upsell' || o === 'upsell_partial' }
 
 async function loadReports(): Promise<CallReport[]> {
   const res = await fetch('/api/call-reports')
@@ -113,9 +115,9 @@ export default function CallReportsPage() {
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = tomorrow.toISOString().split('T')[0]
 
-  const overdueFollowups = reports.filter(r => r.outcome === 'closed_partial' && r.followup_date && r.followup_date <= today)
-  const tomorrowFollowups = reports.filter(r => r.outcome === 'closed_partial' && r.followup_date === tomorrowStr)
-  const upcomingFollowups = reports.filter(r => r.outcome === 'closed_partial' && r.followup_date && r.followup_date > tomorrowStr)
+  const overdueFollowups = reports.filter(r => isPartial(r.outcome) && r.followup_date && r.followup_date <= today)
+  const tomorrowFollowups = reports.filter(r => isPartial(r.outcome) && r.followup_date === tomorrowStr)
+  const upcomingFollowups = reports.filter(r => isPartial(r.outcome) && r.followup_date && r.followup_date > tomorrowStr)
 
   function set<K extends keyof typeof form>(key: K, val: typeof form[K]) {
     setForm(prev => ({ ...prev, [key]: val }))
@@ -203,8 +205,13 @@ export default function CallReportsPage() {
       const amt = r.outcome === 'closed_pif' ? (r.amount ?? 0) : (r.paid_now ?? 0)
       return sum + netRevenue(amt, r.platform!)
     }, 0),
-    upsellGross: upsellReports.reduce((sum, r) => sum + (r.amount ?? 0), 0),
-    upsellNet: upsellReports.reduce((sum, r) => sum + netRevenue(r.amount ?? 0, r.platform!), 0),
+    upsellGross: upsellReports.reduce((sum, r) => {
+      return sum + (r.outcome === 'upsell' ? (r.amount ?? 0) : (r.paid_now ?? 0))
+    }, 0),
+    upsellNet: upsellReports.reduce((sum, r) => {
+      const amt = r.outcome === 'upsell' ? (r.amount ?? 0) : (r.paid_now ?? 0)
+      return sum + netRevenue(amt, r.platform!)
+    }, 0),
   }
 
   return (
@@ -404,7 +411,7 @@ export default function CallReportsPage() {
                           ? 'border-gold bg-gold/10 text-gold'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600'
                       }`}>
-                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–20%)'}
+                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–12.4%)'}
                     </button>
                   ))}
                 </div>
@@ -450,25 +457,26 @@ export default function CallReportsPage() {
             </div>
           )}
 
-          {/* Upsell — dold betalning, bara synlig i ägarfliken */}
+          {/* Upsell */}
           {isUpsell(form.outcome) && (
             <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 space-y-4">
               <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-zinc-600">Betalning</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Plattform" required>
-                  <div className="flex gap-3">
-                    {(['whop', 'hotmart'] as Platform[]).map(p => (
-                      <button key={p} type="button" onClick={() => set('platform', p)}
-                        className={`px-4 py-2 rounded-lg border text-[11px] font-bold transition-all ${
-                          form.platform === p
-                            ? 'border-gold bg-gold/10 text-gold'
-                            : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600'
-                        }`}>
-                        {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–20%)'}
-                      </button>
-                    ))}
-                  </div>
-                </Field>
+              <Field label="Plattform" required>
+                <div className="flex gap-3">
+                  {(['whop', 'hotmart'] as Platform[]).map(p => (
+                    <button key={p} type="button" onClick={() => set('platform', p)}
+                      className={`px-4 py-2 rounded-lg border text-[11px] font-bold transition-all ${
+                        form.platform === p
+                          ? 'border-gold bg-gold/10 text-gold'
+                          : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-600'
+                      }`}>
+                      {p === 'whop' ? 'Whop (–3.7%)' : 'Hotmart (–12.4%)'}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {form.outcome === 'upsell' ? (
                 <Field label="Belopp (kr)" required>
                   <input type="number" min={0} required placeholder="40000"
                     value={form.amount ?? ''}
@@ -480,7 +488,30 @@ export default function CallReportsPage() {
                     </p>
                   )}
                 </Field>
-              </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Field label="Betalt nu (kr)" required>
+                    <input type="number" min={0} required placeholder="20000"
+                      value={form.paid_now ?? ''}
+                      onChange={e => set('paid_now', e.target.value ? Number(e.target.value) : undefined)}
+                      className={inputCls} />
+                    {form.paid_now && form.platform && (
+                      <p className="text-[11px] text-green-400 mt-1">
+                        Netto: {netRevenue(form.paid_now, form.platform).toLocaleString('sv-SE')} kr
+                      </p>
+                    )}
+                  </Field>
+                  <Field label="Resterande (kr)" required>
+                    <input type="number" min={0} required placeholder="150000"
+                      value={form.remaining ?? ''}
+                      onChange={e => set('remaining', e.target.value ? Number(e.target.value) : undefined)}
+                      className={inputCls} />
+                  </Field>
+                  <Field label="Uppföljningsdatum" required>
+                    <DatePicker value={form.followup_date ?? ''} onChange={v => set('followup_date', v)} required />
+                  </Field>
+                </div>
+              )}
             </div>
           )}
 
@@ -547,11 +578,21 @@ export default function CallReportsPage() {
                 </div>
               )}
               {r.outcome === 'upsell' && r.amount && r.platform && (
-                <div className="text-emerald-400 text-[12px] font-bold">
+                <div className="text-purple-400 text-[12px] font-bold">
                   {r.amount.toLocaleString('sv-SE')} kr
-                  <span className="text-[10px] text-emerald-600 ml-1">
+                  <span className="text-[10px] text-purple-600 ml-1">
                     (netto {netRevenue(r.amount, r.platform).toLocaleString('sv-SE')} kr)
                   </span>
+                </div>
+              )}
+              {r.outcome === 'upsell_partial' && r.paid_now && r.platform && (
+                <div>
+                  <div className="text-purple-400 text-[12px] font-bold">
+                    Betalt: {r.paid_now.toLocaleString('sv-SE')} kr
+                  </div>
+                  <div className="text-yellow-400 text-[11px]">
+                    Resterande: {r.remaining?.toLocaleString('sv-SE')} kr · {formatDate(r.followup_date ?? '')}
+                  </div>
                 </div>
               )}
             </div>

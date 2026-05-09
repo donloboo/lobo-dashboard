@@ -7,7 +7,7 @@ const OWNER_PIN = '1987'
 
 const COMMISSION_RATE = 0.05
 const WHOP_FEE = 0.037
-const HOTMART_FEE = 0.20
+const HOTMART_FEE = 0.124
 
 type Platform = 'whop' | 'hotmart'
 type Setter = 'Edvard' | 'Atlassi' | 'Ellow' | 'Direkt'
