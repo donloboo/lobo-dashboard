@@ -441,6 +441,26 @@ export default function SetterReportsPage() {
                 </div>
               </div>
 
+              {/* DM dagsmål progress */}
+              {(() => {
+                const dmPct = Math.min(100, (r.dms_sent / DMS_DAY) * 100)
+                const done = r.dms_sent >= DMS_DAY
+                return (
+                  <div className="mt-3 pt-2 border-t border-zinc-800/40">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-zinc-600">Dagsmål DMs</span>
+                      <span className={`text-[11px] font-black ${done ? 'text-green-400' : 'text-zinc-500'}`}>
+                        {done ? `✓ ${r.dms_sent}/${DMS_DAY}` : `${r.dms_sent}/${DMS_DAY} — ${DMS_DAY - r.dms_sent} kvar`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-green-400' : dmPct >= 80 ? 'bg-orange-400' : 'bg-red-500'}`}
+                        style={{width:`${dmPct}%`}} />
+                    </div>
+                  </div>
+                )
+              })()}
+
               {r.notes && (
                 <p className="mt-2 pt-2 border-t border-zinc-800/40 text-[11px] text-zinc-500">{r.notes}</p>
               )}
