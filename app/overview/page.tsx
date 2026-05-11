@@ -187,6 +187,7 @@ export default function OverviewPage() {
   const [currentWeek, setCurrentWeek] = useState<WeekState>(emptyWeek)
   const [monthWeeks,  setMonthWeeks]  = useState<{weekId: string; state: WeekState}[]>([])
   const [customWeeks, setCustomWeeks] = useState<{weekId: string; state: WeekState}[]>([])
+  const [callReports, setCallReports] = useState<{id:string;name:string;email:string;outcome:string;amount?:number;paid_now?:number;date:string}[]>([])
 
   const weekId = getMondayId()
 
@@ -194,7 +195,25 @@ export default function OverviewPage() {
     loadWeek(weekId).then(setCurrentWeek)
     const ids = getMonthWeekIds()
     Promise.all(ids.map(async wid => ({ weekId: wid, state: await loadWeek(wid) }))).then(setMonthWeeks)
+    fetch('/api/call-reports').then(r => r.json()).then(setCallReports).catch(() => {})
   }, [weekId])
+
+  // Upsell-möjligheter: kunder som betalat men inte fått tillägg
+  const upsellTargets = (() => {
+    const customers: Record<string, { name: string; totalPaid: number; hasUpsell: boolean }> = {}
+    for (const r of callReports) {
+      const key = r.email || r.name
+      if (!customers[key]) customers[key] = { name: r.name, totalPaid: 0, hasUpsell: false }
+      if (r.outcome === 'upsell' || r.outcome === 'upsell_partial') {
+        customers[key].hasUpsell = true
+      }
+      if (r.outcome === 'closed_pif' && r.amount) customers[key].totalPaid += r.amount
+      else if (r.outcome === 'closed_partial' && r.paid_now) customers[key].totalPaid += r.paid_now
+    }
+    return Object.values(customers)
+      .filter(c => c.totalPaid > 0 && !c.hasUpsell)
+      .sort((a, b) => b.totalPaid - a.totalPaid)
+  })()
 
   // Load custom weeks when range changes
   useEffect(() => {
@@ -442,6 +461,28 @@ export default function OverviewPage() {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Upsell-möjligheter */}
+      {upsellTargets.length > 0 && (
+        <div className="mt-4 bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div className="text-[9px] font-bold tracking-[1.2px] uppercase text-zinc-500 mb-1">
+            Upsell-möjligheter
+          </div>
+          <div className="text-[11px] text-zinc-600 mb-4">Kunder som betalat men inte fått något tillägg — rankade efter betalt belopp</div>
+          <div className="space-y-2">
+            {upsellTargets.map((c, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-zinc-800/40">
+                <span className="text-[12px] font-black text-zinc-500 w-5">{i + 1}</span>
+                <span className="text-[14px] font-bold text-white flex-1">{c.name}</span>
+                <div className="text-right">
+                  <div className="text-[9px] text-zinc-600 uppercase tracking-wide">Betalat totalt</div>
+                  <div className="text-[15px] font-black text-gold">{c.totalPaid.toLocaleString('sv-SE')} kr</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
