@@ -364,6 +364,21 @@ export default function OwnerPage() {
           const paid = paidPerPerson[setter] ?? 0
           const remaining = Math.max(0, d.commission - paid)
           const setterPayouts = monthPayouts.filter(p => p.person === setter)
+
+          // Bonus-status denna vecka
+          const dialerLeader = edvWeekBooked > atlWeekBooked ? 'Edvard' : atlWeekBooked > edvWeekBooked ? 'Atlassi' : null
+          const bonusRows: { label: string; target: string; earned: boolean; amount: number }[] = []
+          if (setter === 'Edvard') {
+            bonusRows.push({ label: `${edvWeekBooked}/12 bokningar`, target: 'Flest vinner 600 kr', earned: edvWeekBooked >= 12 && dialerLeader === 'Edvard', amount: 600 })
+          }
+          if (setter === 'Atlassi') {
+            bonusRows.push({ label: `${atlWeekBooked}/12 bokningar`, target: 'Flest vinner 600 kr', earned: atlWeekBooked >= 12 && dialerLeader === 'Atlassi', amount: 600 })
+          }
+          if (setter === 'Ellow') {
+            bonusRows.push({ label: `${ellowWeekDms}/420 DMs`, target: '400 kr bonus', earned: ellowWeekDms >= 420, amount: 400 })
+            bonusRows.push({ label: `${ellowWeekBooked} bokningar`, target: '6 bkn = 300 kr · 14 bkn = 1 000 kr', earned: ellowWeekBooked >= 6, amount: ellowWeekBooked >= 14 ? 1000 : 300 })
+          }
+
           return (
             <div key={setter} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
               {/* Header row */}
@@ -420,6 +435,22 @@ export default function OwnerPage() {
               ) : (
                 <div className="px-5 py-3 text-[12px] text-zinc-700">Inga stängda affärer denna månad</div>
               )}
+
+              {/* Bonus denna vecka */}
+              <div className="border-t border-zinc-800/60 px-5 py-3 bg-zinc-800/20">
+                <div className="text-[9px] font-black tracking-[2px] uppercase text-zinc-600 mb-2">Bonus denna vecka</div>
+                <div className="space-y-1.5">
+                  {bonusRows.map((b, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className={`text-[11px] font-bold ${b.earned ? 'text-white' : 'text-zinc-500'}`}>{b.label}</span>
+                      <span className="text-[11px] text-zinc-600 flex-1">{b.target}</span>
+                      <span className={`text-[13px] font-black ${b.earned ? 'text-gold' : 'text-zinc-700'}`}>
+                        {b.earned ? `✓ ${b.amount.toLocaleString('sv-SE')} kr` : `${b.amount.toLocaleString('sv-SE')} kr`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Payout history */}
               {setterPayouts.length > 0 && (
