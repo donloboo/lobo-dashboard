@@ -178,7 +178,7 @@ export default function DialerReportsPage() {
   const filtered  = filter === 'all' ? byDialer : byDialer.filter(r => r.outcome === filter)
 
   // Tävling — veckans bokningar per dialer
-  const BONUS_TARGET = 8
+  const BONUS_TARGET = 12
   const weekStart = (() => {
     const mon = new Date()
     mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
@@ -248,7 +248,7 @@ export default function DialerReportsPage() {
         <div className="flex items-center gap-3 mb-4">
           <span className="text-[10px] font-black tracking-[2px] uppercase text-gold">Tävling veckan</span>
           <span className="text-[11px] text-zinc-500">Flest bokningar vinner</span>
-          <span className="ml-auto text-[13px] font-black text-gold">500 kr</span>
+          <span className="ml-auto text-[13px] font-black text-gold">600 kr</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {([
