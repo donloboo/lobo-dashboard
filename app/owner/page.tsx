@@ -35,8 +35,8 @@ function feeAmt(gross: number, platform: Platform) {
 
 const MONTH_NAMES = ['Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December']
 
-function isClosed(o: string) { return o === 'closed_pif' || o === 'closed_partial' || o === 'upsell' }
-function isUpsell(o: string) { return o === 'upsell' }
+function isClosed(o: string) { return o === 'closed_pif' || o === 'closed_partial' || o === 'upsell' || o === 'upsell_partial' }
+function isUpsell(o: string) { return o === 'upsell' || o === 'upsell_partial' }
 
 const SETTERS: Setter[] = ['Edvard', 'Atlassi', 'Ellow']
 
@@ -47,6 +47,9 @@ export default function OwnerPage() {
   const [reports, setReports] = useState<CallReport[]>([])
   const [setterReports, setSetterReports] = useState<{date:string;dms_sent:number}[]>([])
   const [dialerReports, setDialerReports] = useState<{date:string;dialer:string;outcome:string}[]>([])
+  const [payouts, setPayouts] = useState<{id:string;date:string;person:string;amount:number;note:string}[]>([])
+  const [payoutForm, setPayoutForm] = useState<{person:string;amount:string;note:string}>({person:'Edvard',amount:'',note:''})
+  const [showPayoutForm, setShowPayoutForm] = useState<string | null>(null)
 
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -57,6 +60,7 @@ export default function OwnerPage() {
     fetch('/api/call-reports').then(r => r.json()).then(setReports).catch(() => {})
     fetch('/api/setter-reports').then(r => r.json()).then(setSetterReports).catch(() => {})
     fetch('/api/dialer-reports').then(r => r.json()).then(setDialerReports).catch(() => {})
+    fetch('/api/payouts').then(r => r.json()).then(setPayouts).catch(() => {})
   }, [unlocked])
 
   function handlePin(digit: string) {
@@ -139,6 +143,31 @@ export default function OwnerPage() {
   const dinVinst = totalNet - totalCommissions
   const dinVinstPct = cashCollected > 0 ? ((dinVinst / cashCollected) * 100).toFixed(1) : '0.0'
   const commissionPct = cashCollected > 0 ? ((totalCommissions / cashCollected) * 100).toFixed(1) : '0.0'
+
+  // Utbetalningar denna månad
+  const monthPayouts = payouts.filter(p => {
+    const d = new Date(p.date)
+    return d.getFullYear() === year && d.getMonth() === month
+  })
+  const paidPerPerson: Record<string, number> = {}
+  for (const p of monthPayouts) {
+    paidPerPerson[p.person] = (paidPerPerson[p.person] ?? 0) + p.amount
+  }
+
+  async function addPayout(person: string) {
+    const amt = parseInt(payoutForm.amount)
+    if (!amt || amt <= 0) return
+    const entry = { id: Date.now().toString(), date: new Date().toISOString().split('T')[0], person, amount: amt, note: payoutForm.note, created_at: new Date().toISOString() }
+    await fetch('/api/payouts', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(entry) })
+    setPayouts(prev => [entry, ...prev])
+    setPayoutForm(f => ({...f, amount:'', note:''}))
+    setShowPayoutForm(null)
+  }
+
+  async function deletePayout(id: string) {
+    await fetch('/api/payouts', { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) })
+    setPayouts(prev => prev.filter(p => p.id !== id))
+  }
 
   // ── PIN screen ──
   if (!unlocked) {
@@ -300,7 +329,7 @@ export default function OwnerPage() {
           valueColor="text-orange-400"
         />
         <KpiCard
-          label="Hotmart-avgifter (20%)"
+          label="Hotmart-avgifter (30%)"
           value={`${hotmartFees.toLocaleString('sv-SE')} kr`}
           sub={`av ${(hotmartFees > 0 ? Math.round(hotmartFees / HOTMART_FEE) : 0).toLocaleString('sv-SE')} kr brutto`}
           valueColor="text-yellow-500"
@@ -319,20 +348,44 @@ export default function OwnerPage() {
       <div className="space-y-3">
         {SETTERS.map(setter => {
           const d = setterData[setter]
+          const paid = paidPerPerson[setter] ?? 0
+          const remaining = Math.max(0, d.commission - paid)
+          const setterPayouts = monthPayouts.filter(p => p.person === setter)
           return (
             <div key={setter} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+              {/* Header row */}
               <div className="px-5 py-3.5 flex items-center justify-between border-b border-zinc-800/60">
                 <div>
                   <span className="font-black text-[15px] text-white">{setter}</span>
                   <span className="text-zinc-600 text-[12px] ml-2">{d.closes} close{d.closes !== 1 ? 's' : ''}</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-0.5">Lön att betala</div>
-                  <div className={`text-[22px] font-black ${d.commission > 0 ? 'text-gold' : 'text-zinc-700'}`}>
-                    {d.commission.toLocaleString('sv-SE')} kr
+                <div className="flex gap-5 items-end">
+                  <div className="text-right">
+                    <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-0.5">Intjänat</div>
+                    <div className={`text-[20px] font-black ${d.commission > 0 ? 'text-gold' : 'text-zinc-700'}`}>
+                      {d.commission.toLocaleString('sv-SE')} kr
+                    </div>
                   </div>
+                  {d.commission > 0 && (
+                    <>
+                      <div className="text-right">
+                        <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-0.5">Betalt ut</div>
+                        <div className="text-[20px] font-black text-zinc-400">
+                          {paid.toLocaleString('sv-SE')} kr
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-0.5">Återstår</div>
+                        <div className={`text-[20px] font-black ${remaining > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {remaining.toLocaleString('sv-SE')} kr
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
+
+              {/* Closes list */}
               {d.closes_list.length > 0 ? (
                 <div className="divide-y divide-zinc-800/40">
                   {d.closes_list.map((c, i) => (
@@ -354,6 +407,60 @@ export default function OwnerPage() {
               ) : (
                 <div className="px-5 py-3 text-[12px] text-zinc-700">Inga stängda affärer denna månad</div>
               )}
+
+              {/* Payout history */}
+              {setterPayouts.length > 0 && (
+                <div className="border-t border-zinc-800/60 divide-y divide-zinc-800/30">
+                  {setterPayouts.map(p => (
+                    <div key={p.id} className="px-5 py-2 flex items-center justify-between bg-zinc-800/20">
+                      <div>
+                        <span className="text-[11px] text-zinc-500">{p.date}</span>
+                        {p.note && <span className="text-[11px] text-zinc-600 ml-2">— {p.note}</span>}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[13px] font-bold text-green-400">–{p.amount.toLocaleString('sv-SE')} kr</span>
+                        <button onClick={() => deletePayout(p.id)} className="text-zinc-700 hover:text-red-400 text-[11px] transition-colors">✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add payout */}
+              <div className="px-5 py-3 border-t border-zinc-800/60">
+                {showPayoutForm === setter ? (
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="number"
+                      placeholder="Belopp kr"
+                      value={payoutForm.amount}
+                      onChange={e => setPayoutForm(f => ({...f, amount: e.target.value}))}
+                      className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white w-28 focus:outline-none focus:border-zinc-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Notat (valfritt)"
+                      value={payoutForm.note}
+                      onChange={e => setPayoutForm(f => ({...f, note: e.target.value}))}
+                      className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-white flex-1 focus:outline-none focus:border-zinc-500"
+                    />
+                    <button onClick={() => addPayout(setter)}
+                      className="bg-green-800 hover:bg-green-700 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg transition-colors">
+                      Spara
+                    </button>
+                    <button onClick={() => setShowPayoutForm(null)}
+                      className="text-zinc-600 hover:text-zinc-400 text-[12px] px-2 transition-colors">
+                      Avbryt
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setShowPayoutForm(setter); setPayoutForm(f => ({...f, person: setter, amount: '', note: ''})) }}
+                    className="text-zinc-600 hover:text-zinc-300 text-[12px] font-bold flex items-center gap-1.5 transition-colors">
+                    <span className="text-[15px] leading-none">+</span> Lägg till utbetalning
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}

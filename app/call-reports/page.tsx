@@ -108,6 +108,8 @@ export default function CallReportsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [filterStart, setFilterStart] = useState('')
+  const [filterEnd, setFilterEnd] = useState('')
 
   useEffect(() => { loadReports().then(setReports) }, [])
 
@@ -190,6 +192,26 @@ export default function CallReportsPage() {
     mon.setHours(0, 0, 0, 0)
     return d >= mon
   })
+
+  // Date range filter
+  const rankedPayments = (() => {
+    if (!filterStart && !filterEnd) return []
+    return reports
+      .filter(r => {
+        if (!isClosed(r.outcome) || !r.platform) return false
+        if (filterStart && r.date < filterStart) return false
+        if (filterEnd && r.date > filterEnd) return false
+        return true
+      })
+      .map(r => {
+        const gross = r.outcome === 'closed_pif' ? (r.amount ?? 0)
+          : r.outcome === 'upsell' ? (r.amount ?? 0)
+          : (r.paid_now ?? 0)
+        return { ...r, gross }
+      })
+      .filter(r => r.gross > 0)
+      .sort((a, b) => b.gross - a.gross)
+  })()
 
   const closeReports = thisWeek.filter(r => isClosed(r.outcome) && !isUpsell(r.outcome) && r.platform)
   const upsellReports = thisWeek.filter(r => isUpsell(r.outcome) && r.platform)
@@ -335,6 +357,51 @@ export default function CallReportsPage() {
           ))}
         </div>
       )}
+
+      {/* Datumfilter */}
+      <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500">Datumfilter</span>
+          <input type="date" value={filterStart} onChange={e => setFilterStart(e.target.value)}
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-[12px] text-white [color-scheme:dark] focus:outline-none focus:border-zinc-500 cursor-pointer" />
+          <span className="text-zinc-600 text-xs">→</span>
+          <input type="date" value={filterEnd} onChange={e => setFilterEnd(e.target.value)}
+            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-[12px] text-white [color-scheme:dark] focus:outline-none focus:border-zinc-500 cursor-pointer" />
+          {(filterStart || filterEnd) && (
+            <button onClick={() => { setFilterStart(''); setFilterEnd('') }}
+              className="text-zinc-600 hover:text-zinc-400 text-[11px] font-bold transition-colors ml-1">
+              Rensa
+            </button>
+          )}
+        </div>
+
+        {rankedPayments.length > 0 && (
+          <div className="mt-4">
+            <div className="text-[9px] font-black tracking-[2px] uppercase text-zinc-600 mb-2">
+              Betalningar — rankade efter storlek
+            </div>
+            <div className="space-y-1">
+              {rankedPayments.map((r, i) => (
+                <div key={r.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-zinc-800/40">
+                  <span className="text-[11px] font-black text-zinc-600 w-5">{i + 1}</span>
+                  <span className="text-[13px] font-bold text-white flex-1">{r.name}</span>
+                  <span className="text-[11px] text-zinc-500">{formatDate(r.date)}</span>
+                  <span className={`text-[11px] font-bold ${outcomeColor(r.outcome)}`}>{outcomeLabel(r.outcome)}</span>
+                  <span className="text-[14px] font-black text-gold">{r.gross.toLocaleString('sv-SE')} kr</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 px-3 flex justify-between text-[11px] text-zinc-600">
+              <span>{rankedPayments.length} betalningar</span>
+              <span>Totalt: <span className="text-white font-bold">{rankedPayments.reduce((s, r) => s + r.gross, 0).toLocaleString('sv-SE')} kr</span></span>
+            </div>
+          </div>
+        )}
+
+        {(filterStart || filterEnd) && rankedPayments.length === 0 && (
+          <div className="mt-3 text-[12px] text-zinc-600">Inga betalningar under vald period.</div>
+        )}
+      </div>
 
       {/* Form */}
       {showForm && (
