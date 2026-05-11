@@ -148,7 +148,7 @@ export default function SetterReportsPage() {
   }
   const stats = period === 'dag' ? day : week
 
-  const DMS_DAY = 60
+  const DMS_DAY = 80
   const CONVOS_DAY = 15
   const BOOKED_DAY = 2
   const DAYS_PER_WEEK = 7

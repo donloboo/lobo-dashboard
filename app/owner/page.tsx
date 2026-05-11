@@ -239,7 +239,7 @@ export default function OwnerPage() {
         <div className="grid grid-cols-3 gap-4">
           {/* Ellow — DMs */}
           {(() => {
-            const goal = 420, val = ellowWeekDms, done = val >= goal
+            const goal = 560, val = ellowWeekDms, done = val >= goal
             const pct = Math.min(100, (val / goal) * 100)
             const bookBonus = ellowWeekBooked >= 14 ? 1000 : ellowWeekBooked >= 6 ? 300 : 0
             return (
@@ -307,7 +307,7 @@ export default function OwnerPage() {
             )
           })()}
         </div>
-        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 400 kr vid 420 DMs · 300 kr vid 6 bokningar · 1 000 kr vid 14 bokningar · Dialers: 600 kr till den som bokar flest (minst 12)</div>
+        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 400 kr vid 560 DMs (80/dag) · 300 kr vid 6 bokningar · 1 000 kr vid 14 bokningar · Dialers: 600 kr till den som bokar flest (minst 12)</div>
       </div>
 
       {/* Cash Collected — big card */}
@@ -375,7 +375,7 @@ export default function OwnerPage() {
             bonusRows.push({ label: `${atlWeekBooked}/12 bokningar`, target: 'Flest vinner 600 kr', earned: atlWeekBooked >= 12 && dialerLeader === 'Atlassi', amount: 600 })
           }
           if (setter === 'Ellow') {
-            bonusRows.push({ label: `${ellowWeekDms}/420 DMs`, target: '400 kr bonus', earned: ellowWeekDms >= 420, amount: 400 })
+            bonusRows.push({ label: `${ellowWeekDms}/560 DMs`, target: '400 kr bonus', earned: ellowWeekDms >= 560, amount: 400 })
             bonusRows.push({ label: `${ellowWeekBooked} bokningar`, target: '6 bkn = 300 kr · 14 bkn = 1 000 kr', earned: ellowWeekBooked >= 6, amount: ellowWeekBooked >= 14 ? 1000 : 300 })
           }
 
