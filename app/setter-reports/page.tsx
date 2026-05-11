@@ -240,6 +240,65 @@ export default function SetterReportsPage() {
         </div>
       </div>
 
+      {/* Veckans bonusmål */}
+      <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500 mb-4">Veckans bonusmål</div>
+        <div className="space-y-4">
+
+          {/* DM-bonus */}
+          {(() => {
+            const goal = 560, val = week.dms, done = val >= goal
+            const pct = Math.min(100, (val / goal) * 100)
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[12px] font-bold text-zinc-300">DMs skickade</span>
+                  <span className={`text-[13px] font-black ${done ? 'text-gold' : 'text-zinc-500'}`}>
+                    {done ? '✓ 400 kr upplåst' : `${val} / ${goal}`}
+                  </span>
+                </div>
+                <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${done ? 'bg-gold' : val / goal >= 0.8 ? 'bg-orange-400' : 'bg-zinc-500'}`}
+                    style={{width:`${pct}%`}} />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] text-zinc-600">{done ? 'Klart!' : `${goal - val} DMs kvar för 400 kr`}</span>
+                  <span className="text-[10px] text-zinc-700">80/dag × 7 dagar</span>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Boknings-bonus */}
+          {(() => {
+            const val = week.booked
+            const tier1 = 6, tier2 = 14
+            const bonus = val >= tier2 ? 1000 : val >= tier1 ? 300 : 0
+            const nextGoal = val >= tier2 ? tier2 : val >= tier1 ? tier2 : tier1
+            const pct = Math.min(100, (val / tier2) * 100)
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[12px] font-bold text-zinc-300">Bokningar denna vecka</span>
+                  <span className={`text-[13px] font-black ${bonus > 0 ? 'text-gold' : 'text-zinc-500'}`}>
+                    {val >= tier2 ? '✓ 1 000 kr upplåst' : val >= tier1 ? `✓ 300 kr · ${tier2 - val} kvar för 1 000 kr` : `${val} / ${tier1}`}
+                  </span>
+                </div>
+                <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${val >= tier2 ? 'bg-gold' : val >= tier1 ? 'bg-orange-400' : 'bg-zinc-500'}`}
+                    style={{width:`${pct}%`}} />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] text-zinc-600">{val >= tier2 ? 'Max bonus nådd!' : `${nextGoal - val} bokningar kvar för ${val >= tier1 ? '1 000' : '300'} kr`}</span>
+                  <span className="text-[10px] text-zinc-700">6 bkn = 300 kr · 14 bkn = 1 000 kr</span>
+                </div>
+              </div>
+            )
+          })()}
+
+        </div>
+      </div>
+
       {saved && (
         <div className="mb-4 bg-green-950/50 border border-green-700 rounded-xl p-3 text-sm text-green-400 font-bold">
           {editId ? 'Rapport uppdaterad.' : 'Rapport sparad — scorekarden uppdateras automatiskt.'}
