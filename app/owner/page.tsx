@@ -94,6 +94,10 @@ export default function OwnerPage() {
     .reduce((s, r) => s + (r.dms_sent ?? 0), 0)
   const edvWeekBooked = dialerReports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart && r.dialer === 'Edvard'  && r.outcome === 'booked').length
   const atlWeekBooked = dialerReports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart && r.dialer === 'Atlassi' && r.outcome === 'booked').length
+  const ellowWeekBooked = reports.filter(r => {
+    const d = new Date(r.date + 'T00:00:00')
+    return d >= weekStart && (r.booked_by as string) === 'Ellow'
+  }).length
 
   // ── Filtrera denna månad ──
   const monthReports = reports.filter(r => {
@@ -233,10 +237,11 @@ export default function OwnerPage() {
       <div className="mb-6 bg-zinc-900 border border-zinc-700 rounded-xl p-5">
         <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500 mb-4">Veckans KPI-mål</div>
         <div className="grid grid-cols-3 gap-4">
-          {/* Ellow */}
+          {/* Ellow — DMs */}
           {(() => {
-            const goal = 60, val = ellowWeekDms, done = val >= goal
+            const goal = 420, val = ellowWeekDms, done = val >= goal
             const pct = Math.min(100, (val / goal) * 100)
+            const bookBonus = ellowWeekBooked >= 14 ? 1000 : ellowWeekBooked >= 6 ? 300 : 0
             return (
               <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
                 <div className="text-[10px] font-black tracking-[1.5px] uppercase text-zinc-500 mb-1">Ellow — DM Setter</div>
@@ -248,14 +253,22 @@ export default function OwnerPage() {
                   <div className={`h-full rounded-full ${done ? 'bg-gold' : 'bg-zinc-500'}`} style={{width:`${pct}%`}} />
                 </div>
                 <div className={`text-[11px] font-bold ${done ? 'text-gold' : 'text-zinc-600'}`}>
-                  {done ? '✓ Bonus upplåst — 400 kr' : `${goal - val} DMs kvar`}
+                  {done ? '✓ DM-bonus upplåst — 400 kr' : `${goal - val} DMs kvar`}
+                </div>
+                <div className="mt-2 pt-2 border-t border-zinc-800/60">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-zinc-600">Bokningar: <span className={`font-bold ${ellowWeekBooked >= 6 ? 'text-white' : 'text-zinc-600'}`}>{ellowWeekBooked}</span></span>
+                    <span className={`text-[11px] font-bold ${bookBonus > 0 ? 'text-gold' : 'text-zinc-700'}`}>
+                      {ellowWeekBooked >= 14 ? '✓ 1 000 kr' : ellowWeekBooked >= 6 ? '✓ 300 kr' : `6 bkn = 300 kr · 14 bkn = 1 000 kr`}
+                    </span>
+                  </div>
                 </div>
               </div>
             )
           })()}
           {/* Edvard */}
           {(() => {
-            const goal = 8, val = edvWeekBooked, done = val >= goal
+            const goal = 12, val = edvWeekBooked, done = val >= goal
             const pct = Math.min(100, (val / goal) * 100)
             return (
               <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
@@ -275,7 +288,7 @@ export default function OwnerPage() {
           })()}
           {/* Atlassi */}
           {(() => {
-            const goal = 8, val = atlWeekBooked, done = val >= goal
+            const goal = 12, val = atlWeekBooked, done = val >= goal
             const pct = Math.min(100, (val / goal) * 100)
             return (
               <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
@@ -294,7 +307,7 @@ export default function OwnerPage() {
             )
           })()}
         </div>
-        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 400 kr vid 60 DMs · Dialers: 500 kr till den som bokar flest (minst 8)</div>
+        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 400 kr vid 420 DMs · 300 kr vid 6 bokningar · 1 000 kr vid 14 bokningar · Dialers: 600 kr till den som bokar flest (minst 12)</div>
       </div>
 
       {/* Cash Collected — big card */}
