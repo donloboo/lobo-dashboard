@@ -247,14 +247,16 @@ export default function SetterReportsPage() {
 
           {/* DM-bonus */}
           {(() => {
-            const goal = 560, val = week.dms, done = val >= goal
+            const goal = 560, val = week.dms
+            const qualifyViaBookings = week.booked >= 14
+            const done = val >= goal || qualifyViaBookings
             const pct = Math.min(100, (val / goal) * 100)
             return (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[12px] font-bold text-zinc-300">DMs skickade</span>
                   <span className={`text-[13px] font-black ${done ? 'text-gold' : 'text-zinc-500'}`}>
-                    {done ? '✓ 400 kr upplåst' : `${val} / ${goal}`}
+                    {done ? '✓ 500 kr upplåst' : `${val} / ${goal}`}
                   </span>
                 </div>
                 <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
@@ -262,8 +264,10 @@ export default function SetterReportsPage() {
                     style={{width:`${pct}%`}} />
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-[10px] text-zinc-600">{done ? 'Klart!' : `${goal - val} DMs kvar för 400 kr`}</span>
-                  <span className="text-[10px] text-zinc-700">80/dag × 7 dagar</span>
+                  <span className="text-[10px] text-zinc-600">
+                    {done ? (qualifyViaBookings && val < goal ? '✓ Upplåst via bokningar (2+/dag)' : 'Klart!') : `${goal - val} DMs kvar för 500 kr`}
+                  </span>
+                  <span className="text-[10px] text-zinc-700">80/dag · eller 2 bkn/dag</span>
                 </div>
               </div>
             )
@@ -273,15 +277,15 @@ export default function SetterReportsPage() {
           {(() => {
             const val = week.booked
             const tier1 = 6, tier2 = 14
-            const bonus = val >= tier2 ? 1000 : val >= tier1 ? 300 : 0
-            const nextGoal = val >= tier2 ? tier2 : val >= tier1 ? tier2 : tier1
+            const bonus = val >= tier2 ? 1000 : val >= tier1 ? 400 : 0
+            const nextGoal = val >= tier2 ? tier2 : tier1
             const pct = Math.min(100, (val / tier2) * 100)
             return (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[12px] font-bold text-zinc-300">Bokningar denna vecka</span>
                   <span className={`text-[13px] font-black ${bonus > 0 ? 'text-gold' : 'text-zinc-500'}`}>
-                    {val >= tier2 ? '✓ 1 000 kr upplåst' : val >= tier1 ? `✓ 300 kr · ${tier2 - val} kvar för 1 000 kr` : `${val} / ${tier1}`}
+                    {val >= tier2 ? '✓ 1 000 kr upplåst' : val >= tier1 ? `✓ 400 kr · ${tier2 - val} kvar för 1 000 kr` : `${val} / ${tier1}`}
                   </span>
                 </div>
                 <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
@@ -289,8 +293,8 @@ export default function SetterReportsPage() {
                     style={{width:`${pct}%`}} />
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-[10px] text-zinc-600">{val >= tier2 ? 'Max bonus nådd!' : `${nextGoal - val} bokningar kvar för ${val >= tier1 ? '1 000' : '300'} kr`}</span>
-                  <span className="text-[10px] text-zinc-700">6 bkn = 300 kr · 14 bkn = 1 000 kr</span>
+                  <span className="text-[10px] text-zinc-600">{val >= tier2 ? 'Max bonus nådd!' : `${nextGoal - val} bokningar kvar för ${val >= tier1 ? '1 000' : '400'} kr`}</span>
+                  <span className="text-[10px] text-zinc-700">6 bkn = 400 kr · 14 bkn = 1 000 kr</span>
                 </div>
               </div>
             )

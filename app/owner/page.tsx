@@ -239,9 +239,11 @@ export default function OwnerPage() {
         <div className="grid grid-cols-3 gap-4">
           {/* Ellow — DMs */}
           {(() => {
-            const goal = 560, val = ellowWeekDms, done = val >= goal
+            const goal = 560, val = ellowWeekDms
+            const qualifyViaBookings = ellowWeekBooked >= 14
+            const done = val >= goal || qualifyViaBookings
             const pct = Math.min(100, (val / goal) * 100)
-            const bookBonus = ellowWeekBooked >= 14 ? 1000 : ellowWeekBooked >= 6 ? 300 : 0
+            const bookBonus = ellowWeekBooked >= 14 ? 1000 : ellowWeekBooked >= 6 ? 400 : 0
             return (
               <div className={`rounded-xl border p-4 ${done ? 'border-gold/40 bg-gold/5' : 'border-zinc-800'}`}>
                 <div className="text-[10px] font-black tracking-[1.5px] uppercase text-zinc-500 mb-1">Ellow — DM Setter</div>
@@ -253,7 +255,7 @@ export default function OwnerPage() {
                   <div className={`h-full rounded-full ${done ? 'bg-gold' : 'bg-zinc-500'}`} style={{width:`${pct}%`}} />
                 </div>
                 <div className={`text-[11px] font-bold ${done ? 'text-gold' : 'text-zinc-600'}`}>
-                  {done ? '✓ DM-bonus upplåst — 400 kr' : `${goal - val} DMs kvar`}
+                  {done ? '✓ DM-bonus upplåst — 500 kr' : `${goal - val} DMs kvar`}
                 </div>
                 <div className="mt-2 pt-2 border-t border-zinc-800/60">
                   <div className="flex items-center justify-between">
@@ -307,7 +309,7 @@ export default function OwnerPage() {
             )
           })()}
         </div>
-        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 400 kr vid 560 DMs (80/dag) · 300 kr vid 6 bokningar · 1 000 kr vid 14 bokningar · Dialers: 600 kr till den som bokar flest (minst 12)</div>
+        <div className="mt-3 text-[10px] text-zinc-700">Ellow: 500 kr vid 560 DMs eller 14 bkn/v · 400 kr vid 6 bokningar · 1 000 kr vid 14 bokningar · Dialers: 600 kr till den som bokar flest (minst 12)</div>
       </div>
 
       {/* Cash Collected — big card */}
@@ -375,8 +377,8 @@ export default function OwnerPage() {
             bonusRows.push({ label: `${atlWeekBooked}/12 bokningar`, target: 'Flest vinner 600 kr', earned: atlWeekBooked >= 12 && dialerLeader === 'Atlassi', amount: 600 })
           }
           if (setter === 'Ellow') {
-            bonusRows.push({ label: `${ellowWeekDms}/560 DMs`, target: '400 kr bonus', earned: ellowWeekDms >= 560, amount: 400 })
-            bonusRows.push({ label: `${ellowWeekBooked} bokningar`, target: '6 bkn = 300 kr · 14 bkn = 1 000 kr', earned: ellowWeekBooked >= 6, amount: ellowWeekBooked >= 14 ? 1000 : 300 })
+            bonusRows.push({ label: `${ellowWeekDms}/560 DMs`, target: '500 kr · eller 14 bkn/v', earned: ellowWeekDms >= 560 || ellowWeekBooked >= 14, amount: 500 })
+            bonusRows.push({ label: `${ellowWeekBooked} bokningar`, target: '6 bkn = 400 kr · 14 bkn = 1 000 kr', earned: ellowWeekBooked >= 6, amount: ellowWeekBooked >= 14 ? 1000 : 400 })
           }
 
           return (
