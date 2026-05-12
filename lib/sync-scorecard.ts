@@ -56,6 +56,19 @@ export function syncScorecard() {
   const pikzReports   = readJson<any[]>(PIKZ_FILE,   [])
   const scorecard     = readJson<Record<string, Record<string, Record<string, number>>>>(SC_FILE, {})
 
+  // Rensa alla lobo_-fält så raderade samtal inte lämnar kvar gammal intäkt
+  for (const weekId of Object.keys(scorecard)) {
+    for (const dayKey of Object.keys(scorecard[weekId])) {
+      const day = scorecard[weekId][dayKey]
+      delete day.lobo_shown
+      delete day.lobo_noshow
+      delete day.lobo_closed
+      delete day.lobo_dq
+      delete day.lobo_whop_rev
+      delete day.lobo_hotmart_rev
+    }
+  }
+
   const allDates = new Set<string>()
   callReports.forEach(r => r.date && allDates.add(r.date))
   dialerReports.forEach(r => r.date && allDates.add(r.date))
