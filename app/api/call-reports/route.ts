@@ -27,7 +27,14 @@ export async function POST(req: Request) {
     const oldIds = new Set(oldData.map((r: { id: string }) => r.id))
     const oldById = Object.fromEntries(oldData.map((r: { id: string; outcome: string }) => [r.id, r]))
 
-    fs.writeFileSync(FILE, JSON.stringify(newData, null, 2))
+    // Merge: upsert incoming entries, keep existing entries not touched by this save
+    const newById = Object.fromEntries(newData.map((r: { id: string }) => [r.id, r]))
+    const merged = [
+      ...oldData.filter((r: { id: string }) => !newById[r.id]),
+      ...newData,
+    ]
+
+    fs.writeFileSync(FILE, JSON.stringify(merged, null, 2))
     syncScorecard()
 
     for (const r of newData) {
@@ -48,6 +55,19 @@ export async function POST(req: Request) {
       }
     }
 
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: String(e) }, { status: 500 })
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { id } = await req.json()
+    const oldData = readOld()
+    const updated = oldData.filter((r: { id: string }) => r.id !== id)
+    fs.writeFileSync(FILE, JSON.stringify(updated, null, 2))
+    syncScorecard()
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 })

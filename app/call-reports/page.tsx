@@ -179,9 +179,12 @@ export default function CallReportsPage() {
   }
 
   async function handleDelete(id: string) {
-    const updated = reports.filter(r => r.id !== id)
-    setReports(updated)
-    await saveReports(updated)
+    setReports(prev => prev.filter(r => r.id !== id))
+    await fetch('/api/call-reports', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
     setDeleteId(null)
   }
 
