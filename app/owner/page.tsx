@@ -379,6 +379,8 @@ export default function OwnerPage() {
             bonusRows.push({ label: `${ellowWeekDms}/560 DMs`, target: '500 kr · eller 14 bkn/v', earned: ellowWeekDms >= 560 || ellowWeekBooked >= 14, amount: 500 })
             bonusRows.push({ label: `${ellowWeekBooked} bokningar`, target: '6 bkn = 400 kr · 14 bkn = 1 000 kr', earned: ellowWeekBooked >= 6, amount: ellowWeekBooked >= 14 ? 1000 : 400 })
           }
+          const earnedBonus = bonusRows.filter(b => b.earned).reduce((s, b) => s + b.amount, 0)
+          const totalOwed = Math.max(0, d.commission - paid) + earnedBonus
 
           return (
             <div key={setter} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
@@ -404,12 +406,23 @@ export default function OwnerPage() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-0.5">Återstår</div>
+                        <div className="text-[9px] text-zinc-600 uppercase tracking-widest mb-0.5">Lön kvar</div>
                         <div className={`text-[20px] font-black ${remaining > 0 ? 'text-red-400' : 'text-green-400'}`}>
                           {remaining.toLocaleString('sv-SE')} kr
                         </div>
                       </div>
                     </>
+                  )}
+                  {totalOwed > 0 && (
+                    <div className="text-right border-l border-zinc-700 pl-5">
+                      <div className="text-[9px] text-zinc-400 uppercase tracking-widest mb-0.5 font-black">Totalt att betala</div>
+                      <div className="text-[22px] font-black text-white">
+                        {totalOwed.toLocaleString('sv-SE')} kr
+                      </div>
+                      {earnedBonus > 0 && (
+                        <div className="text-[10px] text-gold mt-0.5">inkl. {earnedBonus.toLocaleString('sv-SE')} kr bonus</div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
