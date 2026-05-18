@@ -118,8 +118,7 @@ export default function OwnerPage() {
   for (const r of monthReports) {
     if (!r.platform) continue
 
-    const gross = isUpsell(r.outcome)
-      ? (r.amount ?? 0)
+    const gross = r.outcome === 'upsell' ? (r.amount ?? 0)
       : r.outcome === 'closed_pif' ? (r.amount ?? 0) : (r.paid_now ?? 0)
 
     cashCollected += gross

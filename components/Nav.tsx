@@ -7,6 +7,7 @@ const TABS = [
   { href: '/scorecard',       label: 'Sales Scorecard' },
   { href: '/call-reports',    label: 'Call Reports' },
   { href: '/dialer-reports',  label: 'Dialer Reports' },
+  { href: '/dialer-queue',    label: 'Dialer Kö' },
   { href: '/setter-reports',  label: 'Setter Reports' },
   { href: '/call-review',     label: 'Granskning' },
   { href: '/owner',           label: '🔒' },
