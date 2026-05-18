@@ -50,6 +50,7 @@ export default function OwnerPage() {
   const [payouts, setPayouts] = useState<{id:string;date:string;person:string;amount:number;note:string}[]>([])
   const [payoutForm, setPayoutForm] = useState<{person:string;amount:string;note:string}>({person:'Edvard',amount:'',note:''})
   const [showPayoutForm, setShowPayoutForm] = useState<string | null>(null)
+  const [weekView, setWeekView] = useState<'denna' | 'förra'>('denna')
 
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -86,18 +87,24 @@ export default function OwnerPage() {
   }
 
   // ── Vecko-KPIs ──
-  const weekStart = (() => {
+  const thisMonStart = (() => {
     const m = new Date(); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); m.setHours(0,0,0,0); return m
   })()
-  const ellowWeekDms = setterReports
-    .filter(r => new Date(r.date + 'T00:00:00') >= weekStart)
-    .reduce((s, r) => s + (r.dms_sent ?? 0), 0)
-  const edvWeekBooked = dialerReports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart && r.dialer === 'Edvard'  && r.outcome === 'booked').length
-  const atlWeekBooked = dialerReports.filter(r => new Date(r.date + 'T00:00:00') >= weekStart && r.dialer === 'Atlassi' && r.outcome === 'booked').length
-  const ellowWeekBooked = reports.filter(r => {
-    const d = new Date(r.date + 'T00:00:00')
-    return d >= weekStart && (r.booked_by as string) === 'Ellow'
-  }).length
+  const lastMonStart = new Date(thisMonStart)
+  lastMonStart.setDate(lastMonStart.getDate() - 7)
+
+  const wStart = weekView === 'denna' ? thisMonStart : lastMonStart
+  const wEnd   = weekView === 'denna' ? null : thisMonStart
+
+  const inWeek = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00')
+    return d >= wStart && (wEnd === null || d < wEnd)
+  }
+
+  const ellowWeekDms    = setterReports.filter(r => inWeek(r.date)).reduce((s, r) => s + (r.dms_sent ?? 0), 0)
+  const edvWeekBooked   = dialerReports.filter(r => inWeek(r.date) && r.dialer === 'Edvard'  && r.outcome === 'booked').length
+  const atlWeekBooked   = dialerReports.filter(r => inWeek(r.date) && r.dialer === 'Atlassi' && r.outcome === 'booked').length
+  const ellowWeekBooked = reports.filter(r => inWeek(r.date) && (r.booked_by as string) === 'Ellow').length
 
   // ── Filtrera denna månad ──
   const monthReports = reports.filter(r => {
@@ -234,7 +241,21 @@ export default function OwnerPage() {
 
       {/* Vecko-KPIs */}
       <div className="mb-6 bg-zinc-900 border border-zinc-700 rounded-xl p-5">
-        <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500 mb-4">Veckans KPI-mål</div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500">
+            {weekView === 'denna' ? 'Veckans KPI-mål' : 'Förra veckans KPI-mål'}
+          </div>
+          <div className="flex gap-1 bg-zinc-800 border border-zinc-700 rounded-lg p-0.5">
+            {(['denna', 'förra'] as const).map(w => (
+              <button key={w} onClick={() => setWeekView(w)}
+                className={`px-3 py-1 rounded text-[10px] font-black tracking-wide uppercase transition-colors ${
+                  weekView === w ? 'bg-zinc-600 text-white' : 'text-zinc-500 hover:text-zinc-300'
+                }`}>
+                {w === 'denna' ? 'Denna vecka' : 'Förra vecka'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="grid grid-cols-3 gap-4">
           {/* Ellow — DMs */}
           {(() => {
