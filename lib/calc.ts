@@ -55,7 +55,7 @@ export function calcDay(d: Partial<DayInput> = {}): CalcDay {
     lobo_show_r:   ratio(lSh, lobo_sched),
     lobo_close_r:  ratio(lC, lobo_sched),
     lobo_total_rev: whop + hotmart,
-    lobo_net: whop * 0.963 + hotmart * 0.80,
+    lobo_net: whop * 0.963 + hotmart * 0.70,
 
     edv_dq: edvDQ, atl_dq: atlDQ, lobo_dq: loboDQ,
     edv_dq_rate:  ratio(edvDQ, edvC),

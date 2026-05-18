@@ -41,7 +41,7 @@ export interface CalcDay extends DayInput {
   lobo_show_r: number | null
   lobo_close_r: number | null
   lobo_total_rev: number  // Whop + Hotmart
-  lobo_net: number        // (Whop × 0.963) + (Hotmart × 0.80)
+  lobo_net: number        // (Whop × 0.963) + (Hotmart × 0.70)
   edv_dq_rate: number | null
   atl_dq_rate: number | null
   lobo_dq_rate: number | null
