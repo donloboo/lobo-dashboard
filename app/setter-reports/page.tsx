@@ -61,7 +61,7 @@ export default function SetterReportsPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [period, setPeriod] = useState<'dag' | 'vecka'>('dag')
+  const [period, setPeriod] = useState<'dag' | 'vecka' | 'förra'>('dag')
 
   useEffect(() => { loadReports().then(setReports) }, [])
 
@@ -124,29 +124,36 @@ export default function SetterReportsPage() {
     setDeleteId(null)
   }
 
-  const thisWeek = reports.filter(r => {
-    const d = new Date(r.date + 'T00:00:00')
-    const mon = new Date()
-    mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
-    mon.setHours(0, 0, 0, 0)
-    return d >= mon
-  })
+  const thisMonday = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+    d.setHours(0, 0, 0, 0)
+    return d
+  })()
 
+  const lastMonday = new Date(thisMonday)
+  lastMonday.setDate(lastMonday.getDate() - 7)
+
+  const thisWeek = reports.filter(r => new Date(r.date + 'T00:00:00') >= thisMonday)
+  const lastWeek = reports.filter(r => {
+    const d = new Date(r.date + 'T00:00:00')
+    return d >= lastMonday && d < thisMonday
+  })
   const todayReports = reports.filter(r => r.date === todayStr())
 
-  const week = {
-    dms:     thisWeek.reduce((s, r) => s + r.dms_sent, 0),
-    convos:  thisWeek.reduce((s, r) => s + r.convos,   0),
-    inbound: thisWeek.reduce((s, r) => s + r.inbound,  0),
-    booked:  thisWeek.reduce((s, r) => s + r.booked,   0),
-  }
-  const day = {
-    dms:     todayReports.reduce((s, r) => s + r.dms_sent, 0),
-    convos:  todayReports.reduce((s, r) => s + r.convos,   0),
-    inbound: todayReports.reduce((s, r) => s + r.inbound,  0),
-    booked:  todayReports.reduce((s, r) => s + r.booked,   0),
-  }
-  const stats = period === 'dag' ? day : week
+  const sum = (rows: SetterReport[]) => ({
+    dms:     rows.reduce((s, r) => s + r.dms_sent, 0),
+    convos:  rows.reduce((s, r) => s + r.convos,   0),
+    inbound: rows.reduce((s, r) => s + r.inbound,  0),
+    booked:  rows.reduce((s, r) => s + r.booked,   0),
+  })
+
+  const week     = sum(thisWeek)
+  const prevWeek = sum(lastWeek)
+  const day      = sum(todayReports)
+
+  const stats = period === 'dag' ? day : period === 'vecka' ? week : prevWeek
+  const bonusStats = period === 'förra' ? prevWeek : week
 
   const DMS_DAY = 80
   const CONVOS_DAY = 15
@@ -182,14 +189,14 @@ export default function SetterReportsPage() {
         </button>
       </div>
 
-      {/* DAG / VECKA toggle */}
+      {/* DAG / VECKA / FÖRRA toggle */}
       <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-lg p-1 mb-4 w-fit">
-        {(['dag', 'vecka'] as const).map(p => (
+        {([['dag', 'Dag'], ['vecka', 'Denna vecka'], ['förra', 'Förra vecka']] as const).map(([p, label]) => (
           <button key={p} onClick={() => setPeriod(p)}
-            className={`px-5 py-1.5 rounded text-[11px] font-black tracking-[0.8px] uppercase transition-colors ${
+            className={`px-4 py-1.5 rounded text-[11px] font-black tracking-[0.8px] uppercase transition-colors ${
               period === p ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
             }`}>
-            {p === 'dag' ? 'Dag' : 'Vecka'}
+            {label}
           </button>
         ))}
       </div>
@@ -242,13 +249,15 @@ export default function SetterReportsPage() {
 
       {/* Veckans bonusmål */}
       <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-        <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500 mb-4">Veckans bonusmål</div>
+        <div className="text-[10px] font-black tracking-[2px] uppercase text-zinc-500 mb-4">
+          {period === 'förra' ? 'Förra veckans bonusmål' : 'Veckans bonusmål'}
+        </div>
         <div className="space-y-4">
 
           {/* DM-bonus */}
           {(() => {
-            const goal = 560, val = week.dms
-            const qualifyViaBookings = week.booked >= 14
+            const goal = 560, val = bonusStats.dms
+            const qualifyViaBookings = bonusStats.booked >= 14
             const done = val >= goal || qualifyViaBookings
             const pct = Math.min(100, (val / goal) * 100)
             return (
@@ -275,7 +284,7 @@ export default function SetterReportsPage() {
 
           {/* Boknings-bonus */}
           {(() => {
-            const val = week.booked
+            const val = bonusStats.booked
             const tier1 = 6, tier2 = 14
             const bonus = val >= tier2 ? 1000 : val >= tier1 ? 400 : 0
             const nextGoal = val >= tier2 ? tier2 : tier1
