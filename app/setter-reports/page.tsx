@@ -292,7 +292,9 @@ export default function SetterReportsPage() {
             return (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[12px] font-bold text-zinc-300">Bokningar denna vecka</span>
+                  <span className="text-[12px] font-bold text-zinc-300">
+                    {period === 'förra' ? 'Bokningar förra veckan' : 'Bokningar denna vecka'}
+                  </span>
                   <span className={`text-[13px] font-black ${bonus > 0 ? 'text-gold' : 'text-zinc-500'}`}>
                     {val >= tier2 ? '✓ 1 000 kr upplåst' : val >= tier1 ? `✓ 400 kr · ${tier2 - val} kvar för 1 000 kr` : `${val} / ${tier1}`}
                   </span>

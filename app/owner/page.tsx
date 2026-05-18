@@ -471,9 +471,11 @@ export default function OwnerPage() {
                 <div className="px-5 py-3 text-[12px] text-zinc-700">Inga stängda affärer denna månad</div>
               )}
 
-              {/* Bonus denna vecka */}
+              {/* Bonus */}
               <div className="border-t border-zinc-800/60 px-5 py-3 bg-zinc-800/20">
-                <div className="text-[9px] font-black tracking-[2px] uppercase text-zinc-600 mb-2">Bonus denna vecka</div>
+                <div className="text-[9px] font-black tracking-[2px] uppercase text-zinc-600 mb-2">
+                  {weekView === 'förra' ? 'Bonus förra veckan' : 'Bonus denna vecka'}
+                </div>
                 <div className="space-y-1.5">
                   {bonusRows.map((b, i) => (
                     <div key={i} className="flex items-center gap-3">
