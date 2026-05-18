@@ -104,7 +104,7 @@ export default function OwnerPage() {
   const ellowWeekDms    = setterReports.filter(r => inWeek(r.date)).reduce((s, r) => s + (r.dms_sent ?? 0), 0)
   const edvWeekBooked   = dialerReports.filter(r => inWeek(r.date) && r.dialer === 'Edvard'  && r.outcome === 'booked').length
   const atlWeekBooked   = dialerReports.filter(r => inWeek(r.date) && r.dialer === 'Atlassi' && r.outcome === 'booked').length
-  const ellowWeekBooked = reports.filter(r => inWeek(r.date) && (r.booked_by as string) === 'Ellow').length
+  const ellowWeekBooked = setterReports.filter(r => inWeek(r.date)).reduce((s, r) => s + ((r as any).booked ?? 0), 0)
 
   // ── Filtrera denna månad ──
   const monthReports = reports.filter(r => {
