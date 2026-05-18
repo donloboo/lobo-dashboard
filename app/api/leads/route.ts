@@ -3,10 +3,17 @@ import fs from 'fs'
 import path from 'path'
 
 const FILE = path.join(process.cwd(), 'data', 'leads.json')
+const SEED = path.join(process.cwd(), 'lib', 'leads-seed.json')
 
 function readLeads() {
-  if (!fs.existsSync(FILE)) return []
-  return JSON.parse(fs.readFileSync(FILE, 'utf-8'))
+  if (fs.existsSync(FILE)) return JSON.parse(fs.readFileSync(FILE, 'utf-8'))
+  // First-run on Railway: seed from bundled file (outside the data volume)
+  if (fs.existsSync(SEED)) {
+    const seed = fs.readFileSync(SEED, 'utf-8')
+    try { fs.writeFileSync(FILE, seed) } catch {}
+    return JSON.parse(seed)
+  }
+  return []
 }
 
 function writeLeads(leads: any[]) {
