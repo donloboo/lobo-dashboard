@@ -64,9 +64,27 @@ export default function DialerQueue() {
     const res = await fetch('/api/leads')
     const data = await res.json()
     setLeads(data)
+    return data
   }, [])
 
-  useEffect(() => { fetchLeads() }, [fetchLeads])
+  // Restore dialer from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('dialer_name')
+    if (saved && DIALERS.includes(saved)) setDialer(saved)
+  }, [])
+
+  // On load: fetch leads, then restore any active calling lead for this dialer
+  useEffect(() => {
+    fetchLeads().then((data: Lead[]) => {
+      const saved = localStorage.getItem('dialer_name')
+      if (!saved) return
+      const active = data.find(l => l.status === 'calling' && l.claimed_by === saved)
+      if (active) {
+        setCurrent(active)
+        setShowOutcome(false)
+      }
+    })
+  }, [fetchLeads])
 
   useEffect(() => {
     if (!current) return
@@ -77,6 +95,15 @@ export default function DialerQueue() {
   async function claimNext() {
     if (!dialer) return
     setLoading(true)
+    // Resume any lead this dialer already claimed but didn't submit
+    const active = leads.find(l => l.status === 'calling' && l.claimed_by === dialer)
+    if (active) {
+      setCurrent(active)
+      setTimer(0)
+      setShowOutcome(false)
+      setLoading(false)
+      return
+    }
     const next = leads.find(l => l.status === 'uncalled' && l.claimed_by === null && !l.already_called)
     if (!next) { setLoading(false); return }
     await fetch(`/api/leads/${next.id}`, {
@@ -128,7 +155,7 @@ export default function DialerQueue() {
           <div className="text-zinc-400 mb-8">Vem ringer idag?</div>
           <div className="flex gap-4 justify-center">
             {DIALERS.map(d => (
-              <button key={d} onClick={() => setDialer(d)}
+              <button key={d} onClick={() => { setDialer(d); localStorage.setItem('dialer_name', d) }}
                 className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold px-10 py-4 rounded-xl text-xl transition">
                 {d}
               </button>
@@ -152,7 +179,7 @@ export default function DialerQueue() {
           <div><div className="text-2xl font-bold text-green-400">{booked}</div><div className="text-xs text-zinc-500">Bokade</div></div>
           <div><div className="text-2xl font-bold text-zinc-400">{noAnswer}</div><div className="text-xs text-zinc-500">Inget svar</div></div>
         </div>
-        <button onClick={() => setDialer(null)} className="text-xs text-zinc-600 hover:text-zinc-400">Byt</button>
+        <button onClick={() => { setDialer(null); localStorage.removeItem('dialer_name'); setCurrent(null) }} className="text-xs text-zinc-600 hover:text-zinc-400">Byt</button>
       </div>
 
       {/* Current lead */}
