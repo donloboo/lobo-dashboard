@@ -29,6 +29,7 @@ const OUTCOMES = [
   { value: 'no_answer', label: '📵 Inget svar', color: 'bg-zinc-600 hover:bg-zinc-500' },
   { value: 'not_booked', label: '❌ Inte bokad', color: 'bg-red-700 hover:bg-red-600' },
   { value: 'rebooked', label: '🔄 Ombokad', color: 'bg-yellow-600 hover:bg-yellow-500' },
+  { value: 'dq', label: '🚫 DQ', color: 'bg-purple-800 hover:bg-purple-700' },
 ]
 
 const NOT_BOOKED_REASONS = [
@@ -185,6 +186,11 @@ export default function DialerQueue() {
       {/* Current lead */}
       {current ? (
         <div className="bg-zinc-900 rounded-2xl p-6 mb-4 border border-zinc-800">
+          {current.already_called && (
+            <div className="bg-orange-900 border border-orange-600 text-orange-300 text-xs font-bold px-3 py-1.5 rounded-lg mb-3 text-center tracking-wide">
+              ⚠️ RINGT INNAN — kontrollera historik
+            </div>
+          )}
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-2xl font-bold">{current.name || '—'}</div>
@@ -270,7 +276,7 @@ export default function DialerQueue() {
       {/* Queue preview */}
       <div className="mt-4">
         <div className="text-xs text-zinc-600 uppercase tracking-wider mb-2">Kö — topp 10</div>
-        {leads.filter(l => l.status === 'uncalled').slice(0, 10).map((l, i) => (
+        {leads.filter(l => l.status === 'uncalled' && !l.already_called).slice(0, 10).map((l, i) => (
           <div key={l.id} className="flex items-center justify-between py-2 border-b border-zinc-900">
             <div className="flex items-center gap-3">
               <div className="text-zinc-600 text-xs w-4">{i + 1}</div>
@@ -282,6 +288,11 @@ export default function DialerQueue() {
             <div className={`text-sm font-bold ${scoreColor(l.score)}`}>{l.score}p</div>
           </div>
         ))}
+        {leads.filter(l => l.status === 'uncalled' && l.already_called).length > 0 && (
+          <div className="mt-2 text-xs text-orange-500 text-center">
+            + {leads.filter(l => l.status === 'uncalled' && l.already_called).length} ringt innan
+          </div>
+        )}
       </div>
     </div>
   )
