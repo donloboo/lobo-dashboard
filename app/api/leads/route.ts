@@ -38,13 +38,26 @@ function normalizePhone(p: string) {
   return p.replace(/\s+/g, '').replace(/^00/, '+')
 }
 
+const FAKE_NAMES = new Set([
+  'test','test-1','test-2','test-3','redo','deez','goyslop','ja','jja','sjs',
+  'hhgh','hej','hello','asdf','qwerty','abc','xyz','admin','lobo','edvard','atlassi',
+])
+
 function isRealLead(lead: any): boolean {
   const name = (lead.name || '').trim()
   const phone = (lead.phone || '').replace(/\D/g, '')
-  // Name must have at least 2 alphabetic characters
-  if ((name.match(/[a-zA-ZåäöÅÄÖæøÆØ]/g) || []).length < 2) return false
   // Phone must have at least 8 digits
   if (phone.length < 8) return false
+  // Name must have at least 2 alphabetic characters
+  if ((name.match(/[a-zA-ZåäöÅÄÖæøÆØ]/g) || []).length < 2) return false
+  // Name must contain at least one vowel
+  if (!/[aeiouåäöæøAEIOUÅÄÖÆØ]/.test(name)) return false
+  // Name must not be a known fake/test word
+  if (FAKE_NAMES.has(name.toLowerCase().replace(/[^a-zåäö]/g, ''))) return false
+  // Name must not contain digits (Test-1, Test-2 etc)
+  if (/\d/.test(name)) return false
+  // Name must not be a sentence (more than 4 words = someone typed their goal as name)
+  if (name.split(/\s+/).length > 4) return false
   return true
 }
 
