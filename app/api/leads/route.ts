@@ -38,6 +38,16 @@ function normalizePhone(p: string) {
   return p.replace(/\s+/g, '').replace(/^00/, '+')
 }
 
+function isRealLead(lead: any): boolean {
+  const name = (lead.name || '').trim()
+  const phone = (lead.phone || '').replace(/\D/g, '')
+  // Name must have at least 2 alphabetic characters
+  if ((name.match(/[a-zA-ZåäöÅÄÖæøÆØ]/g) || []).length < 2) return false
+  // Phone must have at least 8 digits
+  if (phone.length < 8) return false
+  return true
+}
+
 export async function GET() {
   const leads = readLeads()
 
@@ -52,7 +62,7 @@ export async function GET() {
   }
 
   const sorted = leads
-    .filter((l: any) => l.phone)
+    .filter((l: any) => l.phone && isRealLead(l))
     .map((l: any) => {
       const alreadyCalled = l.status === 'uncalled' && calledPhones.has(normalizePhone(l.phone))
       return { ...l, score: score(l), already_called: alreadyCalled }
