@@ -20,6 +20,8 @@ type Lead = {
   notes: string
   score: number
   already_called?: boolean
+  effectiveStatus?: string
+  callback_time?: string | null
 }
 
 const DIALERS = ['Edvard', 'Atlassi']
@@ -60,6 +62,7 @@ export default function DialerQueue() {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [timer, setTimer] = useState(0)
+  const [callbackTime, setCallbackTime] = useState('')
 
   const fetchLeads = useCallback(async () => {
     const res = await fetch('/api/leads')
@@ -105,13 +108,21 @@ export default function DialerQueue() {
       setLoading(false)
       return
     }
-    const next = leads.find(l => l.status === 'uncalled' && l.claimed_by === null && !l.already_called)
+    const next = leads.find(l => l.effectiveStatus === 'uncalled' && l.claimed_by === null)
+      ?? leads.find(l => l.status === 'uncalled' && l.claimed_by === null && !l.already_called)
     if (!next) { setLoading(false); return }
-    await fetch(`/api/leads/${next.id}`, {
+    const res = await fetch(`/api/leads/${next.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'calling', claimed_by: dialer, called_at: new Date().toISOString() })
     })
+    // Race condition: someone else claimed this lead — retry with next
+    if (res.status === 409) {
+      await fetchLeads()
+      setLoading(false)
+      claimNext()
+      return
+    }
     setCurrent({ ...next, status: 'calling', claimed_by: dialer })
     setTimer(0)
     setShowOutcome(false)
@@ -124,6 +135,7 @@ export default function DialerQueue() {
 
   async function submitOutcome() {
     if (!current || !outcome) return
+    if (outcome === 'rebooked' && !callbackTime) return
     setLoading(true)
     await fetch(`/api/leads/${current.id}`, {
       method: 'PATCH',
@@ -132,6 +144,7 @@ export default function DialerQueue() {
         status: outcome,
         outcome,
         outcome_reason: outcome === 'not_booked' ? reason : null,
+        callback_time: outcome === 'rebooked' ? callbackTime : null,
         notes
       })
     })
@@ -140,6 +153,7 @@ export default function DialerQueue() {
     setOutcome('')
     setReason('')
     setNotes('')
+    setCallbackTime('')
     await fetchLeads()
     setLoading(false)
   }
@@ -254,6 +268,13 @@ export default function DialerQueue() {
                       {r}
                     </button>
                   ))}
+                </div>
+              )}
+              {outcome === 'rebooked' && (
+                <div className="mb-3">
+                  <div className="text-xs text-zinc-400 mb-1">Ring tillbaka:</div>
+                  <input type="datetime-local" value={callbackTime} onChange={e => setCallbackTime(e.target.value)}
+                    className="w-full bg-zinc-800 text-white rounded-xl p-3 text-sm border border-zinc-700" />
                 </div>
               )}
               <textarea value={notes} onChange={e => setNotes(e.target.value)}

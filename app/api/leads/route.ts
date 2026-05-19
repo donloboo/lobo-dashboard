@@ -61,19 +61,42 @@ export async function GET() {
     }
   }
 
+  const now = Date.now()
+  const H24 = 24 * 60 * 60 * 1000
+
   const sorted = leads
     .filter((l: any) => l.phone && isRealLead(l))
     .map((l: any) => {
-      const alreadyCalled = l.status === 'uncalled' && calledPhones.has(normalizePhone(l.phone))
-      return { ...l, score: score(l), already_called: alreadyCalled }
+      const phone = normalizePhone(l.phone)
+      let effectiveStatus = l.status
+
+      // Recycle no_answer leads older than 24h back into the queue
+      if (l.status === 'no_answer' && l.called_at) {
+        const age = now - new Date(l.called_at).getTime()
+        if (age > H24) effectiveStatus = 'uncalled'
+      }
+
+      // Surface rebooked leads whose callback time has passed
+      if (l.status === 'rebooked' && l.callback_time) {
+        if (now >= new Date(l.callback_time).getTime()) effectiveStatus = 'uncalled'
+      }
+
+      const alreadyCalled = effectiveStatus === 'uncalled' &&
+        (calledPhones.has(phone) || l.status === 'no_answer' || l.status === 'rebooked')
+
+      return { ...l, score: score(l), already_called: alreadyCalled, effectiveStatus }
     })
     .sort((a: any, b: any) => {
-      // Already called → always last
-      if (a.already_called && !b.already_called) return 1
-      if (!a.already_called && b.already_called) return -1
-      if (a.status === 'uncalled' && b.status !== 'uncalled') return -1
-      if (a.status !== 'uncalled' && b.status === 'uncalled') return 1
-      return b.score - a.score
+      const aU = a.effectiveStatus === 'uncalled'
+      const bU = b.effectiveStatus === 'uncalled'
+      if (aU && !bU) return -1
+      if (!aU && bU) return 1
+      if (aU && bU) {
+        if (a.already_called && !b.already_called) return 1
+        if (!a.already_called && b.already_called) return -1
+        return b.score - a.score
+      }
+      return 0
     })
   return NextResponse.json(sorted)
 }
